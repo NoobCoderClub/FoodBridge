@@ -1,0 +1,14 @@
+# Build directories
+.next
+.turbo
+dist
+coverage
+build
+
+# Package managers and locks
+node_modules
+bun.lock
+bun.lockb
+pnpm-lock.yaml
+package-lock.json
+yarn.lock
