@@ -2,6 +2,17 @@
 
 This Turborepo starter is maintained by the Turborepo core team.
 
+## Local development database
+
+FoodBridge's API needs a local Postgres instance:
+
+```sh
+cp .env.example .env
+docker compose up -d
+```
+
+This starts Postgres on `localhost:5432` using the credentials in `.env` (`DATABASE_URL` in `.env` must match `POSTGRES_USER`/`POSTGRES_PASSWORD`/`POSTGRES_DB`). Once it's up, run `apps/api`'s migrations to create the schema.
+
 ## Using this example
 
 Run the following command:
