@@ -17,6 +17,7 @@ const PG_ERROR_STATUS: Record<string, HttpStatus> = {
   '23505': HttpStatus.CONFLICT, // unique_violation
   '23503': HttpStatus.BAD_REQUEST, // foreign_key_violation
   '23514': HttpStatus.BAD_REQUEST, // check_violation
+  P0001: HttpStatus.CONFLICT, // raise_exception (default for hand-written business-rule checks)
 };
 
 @Catch()
