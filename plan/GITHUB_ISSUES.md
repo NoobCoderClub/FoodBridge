@@ -34,8 +34,8 @@ Every later milestone needs a running Postgres instance. Right now there is no d
 2. Add `.env.example` at the repo root (and a copyable `apps/api/.env.example` if `apps/api` loads its own env file) with:
    ```
    DATABASE_URL=postgres://foodbridge:foodbridge@localhost:5432/foodbridge
-   JWT_ACCESS_SECRET=change-me
-   JWT_REFRESH_SECRET=change-me-too
+   BETTER_AUTH_SECRET=change-me
+   BETTER_AUTH_URL=http://localhost:3001
    ```
 3. Add a root README section (or update `README.md`) documenting: `docker compose up -d`, then `cp .env.example .env`, then how migrations are run (cross-reference the migration-tooling issue).
 4. Make sure `.env` is already in `.gitignore` (check root `.gitignore`) — don't commit real secrets.
@@ -65,13 +65,14 @@ Every later milestone needs a running Postgres instance. Right now there is no d
    export enum ListingStatus { Available = "available", Claimed = "claimed", Completed = "completed", Expired = "expired" }
    export enum ClaimStatus { Active = "active", Completed = "completed", NoShow = "no_show" }
    ```
-3. Define entity interfaces in `packages/types/src/entities.ts` (`User`, `Listing`, `Claim`, `Reputation`) matching the DB columns from the schema migration issue field-for-field (including nullable fields like `phone`, `completed_at`).
+3. Define entity interfaces in `packages/types/src/entities.ts` (`User`, `Listing`, `Claim`, `Reputation`) matching the DB columns from the schema migration issue field-for-field (including nullable fields like `phone`, `completed_at`). `User` should mirror Better Auth's base `user` model (`id`, `name`, `email`, `emailVerified`, `image`, `createdAt`, `updatedAt`) plus the custom additional fields this project adds on top (`role`, `status`, `phone`, `verificationInfo`) — see the auth-module issue in M1 for how those additional fields are configured.
 4. Export everything from `packages/types/src/index.ts`.
 5. Add `"@repo/types": "workspace:*"` (or the bun-workspace equivalent already used elsewhere in the repo) as a dependency in `apps/api`, `apps/client`, `apps/admin` package.json files, then run the workspace install.
 
 ## Edge cases / gotchas
 - Keep this package pure types/enums — no runtime logic, no NestJS/React imports — so it stays trivially importable from both a Node backend and a Next.js frontend.
 - If DTOs need validation decorators (`class-validator`) for `apps/api` specifically, keep those in `apps/api` — don't leak backend-only decorators into the shared package that `client`/`admin` also import.
+- Don't redeclare Better Auth's own session/account/verification types here — import those directly from `better-auth` where needed; this package only owns the domain entities layered on top.
 
 ## Acceptance criteria
 All three apps can `import { UserRole, Listing } from "@repo/types"` and type-check successfully; `turbo build` picks up the new package in the dependency graph.
@@ -81,7 +82,7 @@ All three apps can `import { UserRole, Listing } from "@repo/types"` and type-ch
 **Labels:** `api`  |  **GitHub:** https://github.com/NoobCoderClub/FoodBridge/issues/3
 
 ## Context
-`apps/api` currently has no environment configuration story at all — the bare `AppModule` doesn't read any env vars. Every later module (DB connection, JWT secrets) needs a single, validated place to read config from.
+`apps/api` currently has no environment configuration story at all — the bare `AppModule` doesn't read any env vars. Every later module (DB connection, Better Auth secret) needs a single, validated place to read config from.
 
 ## Implementation guide
 1. Install `@nestjs/config` in `apps/api`.
@@ -89,12 +90,12 @@ All three apps can `import { UserRole, Listing } from "@repo/types"` and type-ch
    ```ts
    export interface AppConfig {
      databaseUrl: string;
-     jwtAccessSecret: string;
-     jwtRefreshSecret: string;
+     betterAuthSecret: string;
+     betterAuthUrl: string;
    }
    ```
-3. Register `ConfigModule.forRoot({ isGlobal: true, envFilePath: ".env", validate })` in `AppModule`, where `validate` is a small function (or a `class-validator`-annotated env class) that throws on startup if `DATABASE_URL`, `JWT_ACCESS_SECRET`, or `JWT_REFRESH_SECRET` are missing/empty.
-4. Wherever a module needs config, inject `ConfigService<AppConfig>` rather than reading `process.env` directly — this keeps config access testable and mockable.
+3. Register `ConfigModule.forRoot({ isGlobal: true, envFilePath: ".env", validate })` in `AppModule`, where `validate` is a small function (or a `class-validator`-annotated env class) that throws on startup if `DATABASE_URL`, `BETTER_AUTH_SECRET`, or `BETTER_AUTH_URL` are missing/empty.
+4. Wherever a module needs config, inject `ConfigService<AppConfig>` rather than reading `process.env` directly — this keeps config access testable and mockable. The Better Auth instance itself (see the M1 auth-module issue) also reads `betterAuthSecret`/`betterAuthUrl` through this same `ConfigService` rather than `process.env` directly.
 
 ## Edge cases / gotchas
 - Fail fast: throwing during `ConfigModule.forRoot` validation (not lazily when a query first runs) means a misconfigured deploy never even boots, instead of failing confusingly on the first request.
@@ -108,27 +109,24 @@ Starting `apps/api` with a `.env` missing `DATABASE_URL` exits immediately with 
 **Labels:** `api`, `db`  |  **GitHub:** https://github.com/NoobCoderClub/FoodBridge/issues/4
 
 ## Context
-There is no database schema yet. This issue creates the actual tables (`users`, `listings`, `claims`, `reputation`) that every subsequent module depends on, using a lightweight migration tool rather than an ORM (per the project's "raw SQL" decision).
+There is no database schema yet. Auth-related tables are owned by Better Auth (see the M1 auth-module issue), so this issue creates: the additional columns Better Auth's `user` table needs for this domain, plus the fully hand-rolled `listings`, `claims`, `reputation` tables — using a lightweight migration tool rather than an ORM (per the project's "raw SQL" decision).
 
 ## Implementation guide
 1. Install `node-pg-migrate` (or an equivalent minimal SQL-migration runner) as a dev dependency of `apps/api`.
 2. Add scripts to `apps/api/package.json`: `"migrate:up": "node-pg-migrate up"`, `"migrate:down": "node-pg-migrate down"`, pointed at `DATABASE_URL` from the env config.
-3. Create the initial migration under `apps/api/src/database/migrations/` with the following DDL:
+3. Run Better Auth's own schema generation first (`npx @better-auth/cli generate`, per the M1 auth-module issue) so the `user`, `session`, `account`, `verification` tables already exist before this migration runs — this migration only `ALTER`s the `user` table and creates the domain-specific tables that reference it.
+4. Create the migration under `apps/api/src/database/migrations/` with the following DDL:
    ```sql
-   -- users
-   id                uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-   name              text NOT NULL,
-   email             text UNIQUE NOT NULL,
-   password_hash     text NOT NULL,
-   phone             text,
-   role              text NOT NULL CHECK (role IN ('poster','taker','admin')),
-   status            text NOT NULL DEFAULT 'pending' CHECK (status IN ('pending','approved','rejected','suspended')),
-   verification_info jsonb,
-   created_at        timestamptz NOT NULL DEFAULT now()
+   -- extend Better Auth's `user` table with this domain's fields
+   ALTER TABLE "user"
+     ADD COLUMN role text NOT NULL DEFAULT 'taker' CHECK (role IN ('poster','taker','admin')),
+     ADD COLUMN status text NOT NULL DEFAULT 'pending' CHECK (status IN ('pending','approved','rejected','suspended')),
+     ADD COLUMN phone text,
+     ADD COLUMN verification_info jsonb;
 
    -- listings
    id             uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-   poster_id      uuid NOT NULL REFERENCES users(id),
+   poster_id      uuid NOT NULL REFERENCES "user"(id),
    food_type      text NOT NULL,
    quantity       numeric NOT NULL,
    quantity_unit  text NOT NULL CHECK (quantity_unit IN ('kg','servings')),
@@ -144,31 +142,32 @@ There is no database schema yet. This issue creates the actual tables (`users`, 
    -- claims
    id              uuid PRIMARY KEY DEFAULT gen_random_uuid(),
    listing_id      uuid NOT NULL REFERENCES listings(id),
-   taker_id        uuid NOT NULL REFERENCES users(id),
+   taker_id        uuid NOT NULL REFERENCES "user"(id),
    claimed_at      timestamptz NOT NULL DEFAULT now(),
    pickup_deadline timestamptz NOT NULL,
    status          text NOT NULL DEFAULT 'active' CHECK (status IN ('active','completed','no_show')),
    completed_at    timestamptz
 
    -- reputation
-   user_id         uuid PRIMARY KEY REFERENCES users(id),
+   user_id         uuid PRIMARY KEY REFERENCES "user"(id),
    completed_count integer NOT NULL DEFAULT 0,
    no_show_count   integer NOT NULL DEFAULT 0,
    score           numeric NOT NULL DEFAULT 0,
    updated_at      timestamptz NOT NULL DEFAULT now()
    ```
-4. Add indexes in the same (or a follow-up) migration:
+5. Add indexes in the same (or a follow-up) migration:
    - `CREATE INDEX ON listings (status, expires_at);`
    - `CREATE INDEX ON listings (latitude, longitude);`
    - `CREATE UNIQUE INDEX claims_one_active_per_listing ON claims (listing_id) WHERE status = 'active';` — this partial unique index is what makes double-claims impossible at the DB level, independent of application logic.
-5. Write the corresponding `down` migration dropping everything in reverse dependency order.
+6. Write the corresponding `down` migration dropping everything in reverse dependency order (drop `listings`/`claims`/`reputation` before `ALTER TABLE "user" DROP COLUMN ...`, since `listings`/`claims` reference `"user"(id)`).
 
 ## Edge cases / gotchas
 - `gen_random_uuid()` requires the `pgcrypto` extension (`CREATE EXTENSION IF NOT EXISTS pgcrypto;`) — add that as the very first statement in the migration.
+- This migration must run **after** Better Auth's own schema generation — order matters, since `ALTER TABLE "user"` fails if the table doesn't exist yet. Document this ordering explicitly in the migration README/scripts.
 - The partial unique index is the single most important constraint in this schema — it's the real guarantee behind the "no double-claiming" requirement in the claim endpoint (see the M3 claim-locking issue).
 
 ## Acceptance criteria
-Running `migrate:up` against a fresh local Postgres produces all four tables with the constraints above; `migrate:down` cleanly rolls back to empty.
+Running Better Auth's schema generation followed by `migrate:up` against a fresh local Postgres produces the extended `user` table plus `listings`/`claims`/`reputation` with the constraints above; `migrate:down` cleanly rolls back to Better Auth's base schema.
 
 
 ### #5 — Add `common` module (exception filter, response interceptor)
@@ -198,49 +197,72 @@ An unhandled exception thrown from any controller returns the documented error e
 
 ## M1 — Auth & Approval
 
-### #6 — Implement signup (poster/taker)
+### #6 — Implement signup via Better Auth (poster/taker)
 **Labels:** `api`, `feature`  |  **GitHub:** https://github.com/NoobCoderClub/FoodBridge/issues/6
 
 ## Context
-Per `concept.md` §3, every account starts in `pending` and cannot post or claim until an admin approves it. This issue is the entry point into that state machine.
+Per `concept.md` §3, every account starts in `pending` and cannot post or claim until an admin approves it. Rather than hand-rolling password hashing/storage, signup is built on [Better Auth](https://www.better-auth.com/)'s email/password flow — this issue is the entry point into the `pending` state machine, layered on top of Better Auth instead of a custom `users` module.
 
 ## Implementation guide
-1. Create a `users` module (`apps/api/src/users/`) with a repository layer using raw parameterized `pg` queries (no ORM) — e.g. `usersRepository.create(...)`, `usersRepository.findByEmail(...)`.
-2. `POST /auth/signup` DTO fields: `name`, `email`, `password`, `role` (`poster`|`taker`), `phone`, and an optional `verificationInfo` object (business details for posters, NGO registration proof for takers) stored as `jsonb`.
-3. Validate the DTO with `class-validator` (email format, password minimum length/strength, role restricted to `poster`/`taker` — signup can never create an `admin`).
-4. Hash the password with `bcrypt` (cost factor 10–12) before storing; never store or log the plaintext password.
-5. Reject signup with a `409 Conflict` if the email already exists (query `findByEmail` first, or catch the unique-constraint violation from Postgres).
-6. Insert the new row with `status = 'pending'` explicitly (matches the DB default, but be explicit in code for clarity).
+1. Install `better-auth` in `apps/api` and create `apps/api/src/auth/auth.ts` (or similar) instantiating it:
+   ```ts
+   export const auth = betterAuth({
+     database: pool, // the same pg.Pool used elsewhere in apps/api
+     emailAndPassword: { enabled: true },
+     user: {
+       additionalFields: {
+         role: { type: "string", required: true, defaultValue: "taker", input: true },
+         status: { type: "string", required: true, defaultValue: "pending", input: false },
+         phone: { type: "string", required: false },
+         verificationInfo: { type: "string", required: false }, // stored as jsonb, serialize/deserialize at the boundary
+       },
+     },
+     advanced: { database: { generateId: false } }, // let Postgres generate uuids (see the M0 migration issue)
+   });
+   ```
+   Setting `status`'s `input: false` prevents a signup request from setting its own status to `approved` directly through the additional-fields payload.
+2. Mount Better Auth's handler in NestJS: grab the underlying Express instance (`app.getHttpAdapter().getInstance()`) in `main.ts` and register `app.all("/api/auth/*", toNodeHandler(auth))` **before** Nest's global body-parser/JSON middleware (Better Auth needs the raw request body) — this is the standard recipe for mounting Better Auth on a NestJS/Express app.
+3. Signup itself is then just a call to Better Auth's built-in `POST /api/auth/sign-up/email` with `{ email, password, name, role, phone, verificationInfo }` — no custom signup controller/service needed for the core flow.
+4. Add a `databaseHooks.user.create.before` hook that rejects any `role` value other than `poster`/`taker` (signup can never create an `admin` through this endpoint) and normalizes email casing.
+5. Better Auth handles password hashing, minimum-length validation, and duplicate-email rejection (`422`/`409`-equivalent) internally — don't reimplement any of that.
 
 ## Edge cases / gotchas
-- Do not issue a JWT on signup — a `pending` account cannot log in to protected routes yet (login itself should also check status, see the next issue).
-- Normalize email casing (e.g. lowercase) before the uniqueness check and storage to avoid `Foo@x.com` / `foo@x.com` duplicates.
+- A newly created user must not be able to reach protected routes — since `status` defaults to `pending` and `StatusGuard` (see the next-but-one issue) checks it on every request, this falls out naturally as long as `status` truly can't be set to `approved` via the signup payload (`input: false` above).
+- `verificationInfo` (business/NGO proof) isn't a Better Auth-native concept — store it as a `jsonb`-typed additional field and serialize/deserialize JSON at the DTO boundary since Better Auth's additional-fields typing is limited to primitives.
 
 ## Acceptance criteria
-Signing up creates a `pending` user with a hashed password; duplicate email returns `409`; an admin/role value is never accepted from the public signup payload.
+Signing up via `POST /api/auth/sign-up/email` creates a `pending` user with Better Auth managing the password/hashing; duplicate email is rejected by Better Auth's built-in handling; an admin/approved role or status is never accepted from the public signup payload.
 
 
-### #7 — Implement login (JWT access + refresh)
+### #7 — Configure Better Auth login (email/password + Bearer sessions)
 **Labels:** `api`, `feature`  |  **GitHub:** https://github.com/NoobCoderClub/FoodBridge/issues/7
 
 ## Context
-Once accounts exist, users need to authenticate. Per the confirmed architecture decision, auth is stateless JWT (access + refresh), not server sessions — this avoids a shared session store between the two separate Next.js origins (`client` and `admin`).
+Once accounts exist, users need to authenticate. Per the confirmed architecture decision, login is handled by Better Auth's built-in email/password flow with its **Bearer plugin** enabled — this avoids both a shared cookie/session-store setup *and* hand-rolled JWT code, while still giving the two separate Next.js origins (`client` and `admin`) a simple token they can send as `Authorization: Bearer <token>`.
 
 ## Implementation guide
-1. Create an `auth` module using `@nestjs/jwt` and `passport-jwt`.
-2. `POST /auth/login` — looks up the user by email, verifies the password with `bcrypt.compare`, and on success issues:
-   - an **access token** (short TTL, e.g. 15 minutes) with claims `{ sub: userId, role, status }`
-   - a **refresh token** (long TTL, e.g. 7 days), stored however the project decides (stateless, or a `token_version`/allow-list column on `users` if revocation matters — flag this as a decision if not already covered by another issue).
-3. `POST /auth/refresh` — validates the refresh token and issues a new access token (rotate the refresh token too if implementing rotation).
-4. Set up a `JwtStrategy` (Passport) that validates the access token signature/expiry and attaches `{ userId, role, status }` to `request.user` for use by guards.
-5. Return a clear `401` on bad credentials — don't reveal whether the email exists or the password was wrong (single generic "invalid credentials" message).
+1. Enable the Bearer plugin on the Better Auth instance from the signup issue:
+   ```ts
+   import { bearer } from "better-auth/plugins";
+
+   export const auth = betterAuth({
+     // ...database, emailAndPassword, user.additionalFields from the signup issue
+     plugins: [bearer()],
+     trustedOrigins: [process.env.CLIENT_URL!, process.env.ADMIN_URL!],
+   });
+   ```
+   `trustedOrigins` must list both `apps/client`'s and `apps/admin`'s origins since they're separate Next.js deployments hitting the same `apps/api` instance.
+2. Login itself is Better Auth's built-in `POST /api/auth/sign-in/email` with `{ email, password }` — no custom login controller needed. On success it returns a session; with the Bearer plugin enabled, the session token is also returned in a response header (`set-auth-token`) that the frontend reads and stores, then replays as `Authorization: Bearer <token>` on subsequent requests.
+3. Better Auth verifies the password and issues/manages the session server-side (in its own `session` table) — there's no access/refresh token pair to hand-roll; the Bearer token *is* the session reference, and Better Auth validates it against the DB (or its configured cache) on each request.
+4. Session expiry/rotation is configured via Better Auth's `session` config block (e.g. `session: { expiresIn: ..., updateAge: ... }`) rather than custom JWT TTL logic.
+5. Bad credentials already return a generic error from Better Auth's built-in handler — don't add custom logic that would leak whether an email exists.
 
 ## Edge cases / gotchas
-- Include `status` in the access token claims so `StatusGuard` (next issue) doesn't need an extra DB round-trip on every request — but that means a status change (e.g. admin suspends mid-session) won't take effect until the access token expires. Document this tradeoff; if it's unacceptable, `StatusGuard` should re-check status from the DB instead of trusting the claim.
-- Use separate secrets for access vs refresh tokens (`JWT_ACCESS_SECRET` / `JWT_REFRESH_SECRET` from M0's config).
+- Because sessions are looked up server-side (not just a signed, stateless claim), a status change (e.g. admin suspends mid-session) can take effect immediately if `StatusGuard` (next issue) re-reads `session.user.status` on each request — this is a meaningful improvement over the stateless-JWT tradeoff the project originally had, and should be the default behavior; don't cache session data long enough to reintroduce that staleness.
+- `BETTER_AUTH_SECRET` (from the M0 config issue) must be a strong, unique value per environment — it signs/encrypts Better Auth's internal session data.
 
 ## Acceptance criteria
-Valid credentials return both tokens; the access token is accepted by protected routes; `/auth/refresh` with a valid refresh token issues a fresh access token; invalid credentials return a generic `401`.
+Valid credentials via `POST /api/auth/sign-in/email` return a Bearer session token; that token is accepted by protected routes via `Authorization: Bearer <token>`; invalid credentials return a generic error; a suspended/rejected user's next authenticated request reflects their updated status without needing to wait for a token to "expire."
 
 
 ### #8 — Implement `RolesGuard` + `StatusGuard`
@@ -250,14 +272,16 @@ Valid credentials return both tokens; the access token is accepted by protected 
 Every business endpoint from M2 onward needs to enforce two independent things: *who* can call it (role) and *whether they're allowed to act yet* (approval status). This issue builds the reusable guards everything else will decorate with.
 
 ## Implementation guide
-1. `RolesGuard` — reads `request.user.role` (set by `JwtStrategy`) and compares against a `@Roles('poster' | 'taker' | 'admin')` decorator applied to the route/controller; returns `403` on mismatch.
-2. `StatusGuard` — reads `request.user.status` and enforces `approved` for any route decorated with `@RequireApproved()`; returns `403` with a message distinguishing `pending` ("awaiting admin approval") from `suspended` ("account suspended") so the frontend can show the right message.
-3. Apply both guards globally via `APP_GUARD` providers in `AppModule`, but make them **opt-in via decorators** (i.e., routes without `@Roles(...)` are role-agnostic, routes without `@RequireApproved()` don't require approval) — auth endpoints themselves (`/auth/signup`, `/auth/login`) must remain accessible to `pending`/unauthenticated users.
-4. Write a small decorator helper file (`apps/api/src/common/decorators/roles.decorator.ts`, `require-approved.decorator.ts`) using `SetMetadata`, consistent with NestJS's standard guard/metadata pattern.
+1. Add a small `AuthGuard` (or reuse a `BetterAuthModule` helper) that calls `auth.api.getSession({ headers: request.headers })` for every incoming request and attaches the result (`{ user: { id, role, status, ... } }`) to `request.session` — this replaces the old `JwtStrategy`. Because Better Auth's Bearer plugin looks up the session server-side (see the login issue), this always reflects the user's *current* role/status, not a stale token claim.
+2. `RolesGuard` — reads `request.session.user.role` and compares against a `@Roles('poster' | 'taker' | 'admin')` decorator applied to the route/controller; returns `403` on mismatch.
+3. `StatusGuard` — reads `request.session.user.status` and enforces `approved` for any route decorated with `@RequireApproved()`; returns `403` with a message distinguishing `pending` ("awaiting admin approval") from `suspended` ("account suspended") so the frontend can show the right message.
+4. Apply both guards globally via `APP_GUARD` providers in `AppModule`, but make them **opt-in via decorators** (i.e., routes without `@Roles(...)` are role-agnostic, routes without `@RequireApproved()` don't require approval) — Better Auth's own `/api/auth/*` routes (sign-up, sign-in) must remain accessible to `pending`/unauthenticated users, and are mounted ahead of Nest's route handling anyway (see the signup issue).
+5. Write a small decorator helper file (`apps/api/src/common/decorators/roles.decorator.ts`, `require-approved.decorator.ts`) using `SetMetadata`, consistent with NestJS's standard guard/metadata pattern.
 
 ## Edge cases / gotchas
 - Admins should bypass `StatusGuard` entirely (admin accounts aren't part of the pending/approved lifecycle in the same way) — decide and document this explicitly rather than leaving it implicit.
-- Guard order matters: authentication (is there a valid JWT at all) must run before `RolesGuard`/`StatusGuard`, which assume `request.user` is already populated.
+- Guard order matters: the session-lookup guard (is there a valid Bearer session at all) must run before `RolesGuard`/`StatusGuard`, which assume `request.session` is already populated.
+- Calling `auth.api.getSession` on every request is a DB lookup (or cache hit, if configured) rather than a free signature check like JWT — acceptable at this project's scale, but worth knowing it's not literally free; Better Auth supports secondary storage/caching for session lookups if this ever becomes a bottleneck.
 
 ## Acceptance criteria
 A `pending` user hitting a `@RequireApproved()` route gets `403` with a message indicating pending status; a `taker` hitting a `@Roles('poster')` route gets `403`; an `approved` user of the correct role passes through.
@@ -270,13 +294,14 @@ A `pending` user hitting a `@RequireApproved()` route gets `403` with a message 
 This is the admin side of the state machine described in `concept.md` §3: `pending → approved / rejected`, and `approved → suspended` later for fraud/no-show handling.
 
 ## Implementation guide
-1. Add to the `users` module, guarded by `@Roles('admin')`:
-   - `GET /admin/accounts?status=pending` — list accounts filtered by status (support `pending`/`approved`/`rejected`/`suspended` as query values for the general admin queue, not just `pending`).
-   - `PATCH /admin/accounts/:id/approve` — sets `status = 'approved'`; only valid from `pending`.
-   - `PATCH /admin/accounts/:id/reject` — sets `status = 'rejected'`; body includes a required `reason` string, stored (e.g. in a `rejection_reason` column, or reuse `verification_info` jsonb) so the user can be notified with context.
+1. Add a small `accounts` module (`apps/api/src/accounts/`) — the home for the domain-specific admin endpoints Better Auth doesn't provide out of the box — guarded by `@Roles('admin')`:
+   - `GET /admin/accounts?status=pending` — list accounts filtered by status, querying the `"user"` table directly (support `pending`/`approved`/`rejected`/`suspended` as query values for the general admin queue, not just `pending`).
+   - `PATCH /admin/accounts/:id/approve` — sets the `status` additional field to `'approved'` via a raw `UPDATE "user" SET status = 'approved' WHERE id = $1`; only valid from `pending`.
+   - `PATCH /admin/accounts/:id/reject` — sets `status = 'rejected'`; body includes a required `reason` string, stored (e.g. in a `rejection_reason` column, or reuse the `verification_info` jsonb additional field) so the user can be notified with context.
    - `PATCH /admin/accounts/:id/suspend` — sets `status = 'suspended'`; only valid from `approved`; body includes a required `reason`.
 2. Enforce valid state transitions in the service layer (e.g. rejecting an already-`rejected` account, or suspending a `pending` account, should return `400 Bad Request`) — don't let the DB silently accept any string in the `status` column bypass this logic.
-3. Actual notification delivery (email/SMS) is out of scope for MVP — for now, persist the reason and expose it via the user's own `GET` profile/status endpoint so the frontend can display it.
+3. These endpoints write directly to Better Auth's `"user"` table via raw SQL (same as any other hand-rolled query in this project) — there's no need to route status changes through Better Auth's own API, since `role`/`status` are this project's additional fields, not something Better Auth's core auth flows need to know about.
+4. Actual notification delivery (email/SMS) is out of scope for MVP — for now, persist the reason and expose it via the user's own `GET` profile/status endpoint so the frontend can display it.
 
 ## Edge cases / gotchas
 - Rejecting/suspending doesn't delete the account or its data — historical listings/claims from a later-suspended user should remain intact for stats/audit purposes.
@@ -292,11 +317,19 @@ State transitions match `concept.md` §3 exactly (`pending→approved`, `pending
 `apps/client` currently only has the default Next.js starter page. This issue builds the first real user-facing screens: how a poster or taker actually gets into the system.
 
 ## Implementation guide
-1. `/signup` — a form with role selection (poster vs taker), name/email/password/phone, and a conditional section for `verificationInfo` (business details for posters, NGO registration proof for takers) matching the signup DTO from the earlier issue.
-2. `/login` — email/password form calling `POST /auth/login`; on success store the access + refresh tokens (discuss/decide storage: httpOnly cookie set by a Next.js route handler is safer against XSS than `localStorage` — prefer that if the project's auth flow supports it).
-3. Build a small authenticated-fetch wrapper (e.g. `lib/api-client.ts`) that attaches the access token to requests and transparently calls `/auth/refresh` on a `401` before retrying once.
-4. After signup, show a clear "your account is pending admin approval" state rather than silently redirecting to login as if nothing happened.
-5. On login while still `pending`/`rejected`/`suspended`, surface the specific status-driven message from the API (see `StatusGuard`'s distinct messages) instead of a generic error.
+1. Install `better-auth` in `apps/client` and create a Better Auth client instance (e.g. `lib/auth-client.ts`):
+   ```ts
+   import { createAuthClient } from "better-auth/react";
+
+   export const authClient = createAuthClient({
+     baseURL: process.env.NEXT_PUBLIC_API_URL, // apps/api's origin
+   });
+   ```
+2. `/signup` — a form with role selection (poster vs taker), name/email/password/phone, and a conditional section for `verificationInfo` (business details for posters, NGO registration proof for takers), submitting via `authClient.signUp.email({ email, password, name, role, phone, verificationInfo })`.
+3. `/login` — email/password form calling `authClient.signIn.email({ email, password })`; the client SDK handles reading the Bearer token from the response and can be configured to persist it (e.g. via its built-in storage) so subsequent `authClient` calls automatically attach `Authorization: Bearer <token>`.
+4. For any *non*-Better-Auth API calls (listings, claims, etc. in later milestones), build a small authenticated-fetch wrapper that reads the session token from the same place `authClient` stores it, so both Better Auth calls and regular API calls stay consistent.
+5. After signup, show a clear "your account is pending admin approval" state rather than silently redirecting to login as if nothing happened.
+6. On login while still `pending`/`rejected`/`suspended`, surface the specific status-driven message from the API (see `StatusGuard`'s distinct messages) instead of a generic error — Better Auth's sign-in call succeeds at the auth layer regardless of this project's `status` field, so this check happens against the returned user's `status`, not as a sign-in failure.
 
 ## Edge cases / gotchas
 - Don't let the signup form accept a `role=admin` value even if someone tampers with client-side form state — this must be enforced server-side (already covered by the signup endpoint issue), but the UI shouldn't offer it as an option either.
@@ -315,7 +348,7 @@ Admins need a UI to actually exercise the approve/reject/suspend endpoints — r
 1. `/accounts` — list page in `apps/admin` calling `GET /admin/accounts?status=pending` by default, with a status filter/tab to view `approved`/`rejected`/`suspended` accounts too.
 2. `/accounts/[id]` — detail view showing the account's submitted info (`verification_info`) plus Approve / Reject / Suspend action buttons, each calling the corresponding admin endpoint.
 3. Reject/Suspend actions must prompt for a `reason` (required field) before submitting, matching the API's required-reason contract.
-4. Admin routes/pages themselves need to be protected — an unauthenticated or non-admin session should be redirected away from `/accounts*` (reuse the same authenticated-fetch/guard pattern conventions established for `apps/client`, adapted for the admin app's own login).
+4. Admin routes/pages themselves need to be protected — an unauthenticated or non-admin session should be redirected away from `/accounts*`. Set up the same Better Auth client (`createAuthClient`) in `apps/admin` as in `apps/client` (see the client signup/login issue), and check `authClient.getSession()`'s `user.role === 'admin'` before rendering these pages.
 
 ## Edge cases / gotchas
 - After an approve/reject/suspend action, refresh the list/detail view from the server rather than optimistically mutating local state — admin actions are infrequent enough that correctness matters more than snappiness here.
@@ -339,7 +372,7 @@ This is the first "core product" endpoint — an approved poster creating surplu
 1. Create a `listings` module (`apps/api/src/listings/`) with a repository using raw `pg` queries against the `listings` table from the M0 schema migration.
 2. `POST /listings`, guarded by `@Roles('poster')` + `@RequireApproved()`. DTO fields: `foodType`, `quantity`, `quantityUnit` (`kg`|`servings`), `latitude`, `longitude`, `addressApprox`, `addressExact`, `preparedAt`, `expiresAt`.
 3. Validate: `expiresAt` must be after `preparedAt` and after "now"; `quantity` must be positive; lat/lng within valid ranges (-90..90 / -180..180).
-4. Insert with `poster_id = request.user.userId` (never trust a `posterId` from the request body) and `status = 'available'`.
+4. Insert with `poster_id = request.session.user.id` (never trust a `posterId` from the request body) and `status = 'available'`.
 
 ## Edge cases / gotchas
 - `addressExact` is collected at creation time but must never be returned to non-claiming takers in any listing-read endpoint (see the address-exposure-rule issue) — don't accidentally include it in the create-response payload sent back to the poster's own UI in a way that gets logged/cached insecurely; it's fine for the poster to see their own exact address, just not other users'.
@@ -525,7 +558,7 @@ A claim whose `pickup_deadline` passes while still `active` becomes `no_show` an
 Per `concept.md` §5 ("Claim-unlocks-contact"), this is the piece that actually reveals the poster's phone number and exact pickup address — but only to the taker who holds the active claim on that specific listing. It's a serialization/authorization rule layered on top of the M2 address-exposure-rule DTO, not a new module.
 
 ## Implementation guide
-1. Extend the listing/claim response serializer from the M2 address-exposure-rule issue: when building a response for `GET /listings/:id` or the claim response from `POST /listings/:id/claim`, check whether `request.user.userId` matches the `taker_id` of an `active` claim on that listing.
+1. Extend the listing/claim response serializer from the M2 address-exposure-rule issue: when building a response for `GET /listings/:id` or the claim response from `POST /listings/:id/claim`, check whether `request.session.user.id` matches the `taker_id` of an `active` claim on that listing.
 2. If it matches: include `addressExact` and the poster's `phone` (looked up via the listing's `poster_id`) in the response.
 3. If it doesn't match (or there's no active claim): keep the M2 default (approx address only, no phone) — including for a *different* taker who is merely browsing a listing someone else has already claimed.
 4. Write this as a single shared function/method (e.g. `listingsSerializer.toResponse(listing, requestingUserId)`) reused by every endpoint that returns a listing, so the reveal rule can't be forgotten on a new endpoint later.
@@ -763,7 +796,7 @@ All four dashboard metrics (total rescued, top donors, monthly trend, hotspots) 
 Business logic in `auth`/`users`, `listings`, `claims`, and `reputation` has been built across M1–M5 without dedicated automated coverage yet. This issue closes that gap before the project is considered stable.
 
 ## Implementation guide
-1. `auth`/`users`: password hashing/verification, signup validation (duplicate email, role restriction), login status-based rejection (`pending`/`rejected`/`suspended` can't log in to protected flows), JWT claim shape.
+1. `auth`/`accounts`: signup role-restriction hook (can't self-assign `admin` or `approved` status), the `RolesGuard`/`StatusGuard` behavior built on Better Auth sessions (`pending`/`rejected`/`suspended` can't reach protected flows), admin state-transition validation.
 2. `listings`: create validation (expiry-after-prepared, positive quantity), the address-exposure serializer (never leaks `addressExact` to non-claimants).
 3. `claims`: the contact-reveal serializer (poster and active claimant see contact info, others don't), state-transition guards (can't complete an already-completed/no-show claim).
 4. `reputation`: score recompute math, including the zero-division edge case for brand-new users.
