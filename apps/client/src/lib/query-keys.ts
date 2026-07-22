@@ -7,3 +7,7 @@ export const listingKeys = {
   browse: (lat?: number, lng?: number) => ['listings', 'browse', lat ?? null, lng ?? null] as const,
   detail: (id: string) => ['listings', 'detail', id] as const,
 };
+
+export const claimKeys = {
+  mine: ['claims', 'mine'] as const,
+};

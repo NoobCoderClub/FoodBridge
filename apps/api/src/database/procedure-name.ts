@@ -11,4 +11,8 @@ export type ProcedureName =
   | 'sp_suspend_account'
   | 'fn_browse_listings'
   | 'fn_get_listing_by_id'
-  | 'sp_create_listing';
+  | 'sp_create_listing'
+  | 'sp_claim_listing'
+  | 'sp_expire_listings'
+  | 'sp_release_stale_claims'
+  | 'fn_list_my_claims';

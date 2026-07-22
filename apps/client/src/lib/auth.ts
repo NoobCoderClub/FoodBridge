@@ -1,4 +1,5 @@
 import { createAuthClient } from 'better-auth/client';
+import { inferAdditionalFields } from 'better-auth/client/plugins';
 
 const BEARER_TOKEN_KEY = 'foodbridge_bearer_token';
 
@@ -18,6 +19,16 @@ function setBearerToken(token: string | null) {
 
 export const authClient = createAuthClient({
   baseURL: process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001',
+  plugins: [
+    inferAdditionalFields({
+      user: {
+        role: { type: 'string', required: false },
+        status: { type: 'string', required: false },
+        phone: { type: 'string', required: false },
+        verificationInfo: { type: 'string', required: false },
+      },
+    }),
+  ],
   fetchOptions: {
     auth: {
       type: 'Bearer',
