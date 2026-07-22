@@ -13,6 +13,7 @@ import { AuthGuard } from '../auth/guards/auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { StatusGuard } from '../auth/guards/status.guard';
 import type { AuthenticatedRequest } from '../auth/interfaces/authenticated-request.interface';
+import { ClaimsService } from '../claims/claims.service';
 import { BrowseListingsDto } from './dto/browse-listings.dto';
 import { CreateListingDto } from './dto/create-listing.dto';
 import { ListingsService } from './listings.service';
@@ -20,7 +21,10 @@ import { ListingsService } from './listings.service';
 @Controller('listings')
 @UseGuards(AuthGuard, StatusGuard)
 export class ListingsController {
-  constructor(private readonly listingsService: ListingsService) {}
+  constructor(
+    private readonly listingsService: ListingsService,
+    private readonly claimsService: ClaimsService,
+  ) {}
 
   @Post()
   @UseGuards(RolesGuard)
@@ -39,5 +43,12 @@ export class ListingsController {
   @Get(':id')
   getById(@Req() req: AuthenticatedRequest, @Param('id') id: string) {
     return this.listingsService.getById(id, req.user.id);
+  }
+
+  @Post(':id/claim')
+  @UseGuards(RolesGuard)
+  @Roles('taker')
+  claim(@Req() req: AuthenticatedRequest, @Param('id') id: string) {
+    return this.claimsService.claim(id, req.user.id);
   }
 }
