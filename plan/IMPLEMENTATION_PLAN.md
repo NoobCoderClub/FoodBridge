@@ -8,18 +8,22 @@ The repo currently is pure `create-turbo` scaffolding (default Next.js pages in 
 
 ## 1. Foundational decisions
 
-| Area         | Decision                                                                                                   | Why                                                                                                                                                                                                                                                                                           |
-| ------------ | ---------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| DB access    | Plain [`pg`](https://node-postgres.com/) driver, hand-written parameterized SQL — no ORM, no query builder | Matches concept.md's "raw SQL against PostgreSQL" intent literally; keeps query logic visible and reviewable                                                                                                                                                                                  |
-| Auth         | [Better Auth](https://www.better-auth.com/), mounted inside `apps/api`, with its Bearer plugin enabled     | Handles password hashing, session/token issuance, and email/password flows out of the box instead of hand-rolled JWT code; the Bearer plugin lets the two separate Next.js origins (`client`, `admin`) authenticate via `Authorization: Bearer <token>` without cookie/cross-origin headaches |
-| Geo/distance | Plain `latitude`/`longitude` columns + Haversine formula in SQL                                            | Good enough for city-scale sorting; avoids a PostGIS dependency for MVP scope                                                                                                                                                                                                                 |
-| Structure    | Phased milestones (M0–M7), each independently buildable/demoable                                           | Lets the project be built and tested incrementally instead of all-at-once                                                                                                                                                                                                                     |
+| Area           | Decision                                                                                                   | Why                                                                                                                                                                                                                                                                                           |
+| -------------- | ---------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| DB access      | **No inline SQL in application code.** Every read/write goes through a Postgres **stored procedure/function** (PL/pgSQL). `apps/api` never builds SQL strings — it only calls procedures via a thin [`pg`](https://node-postgres.com/) wrapper, e.g. `SELECT * FROM sp_create_listing($1,$2,...)` | Keeps query logic and validation living in one place (the DB), not scattered across service files; matches concept.md's "raw SQL against PostgreSQL" intent while centralizing it in reviewable, testable DB routines instead of app code                                                   |
+| Business logic | Each domain operation is a **stored procedure/function** at the data layer; the NestJS **service** layer is a thin function per operation that just invokes the matching procedure and shapes the result — no business rules re-implemented in TypeScript                                    | Keeps a single source of truth for invariants (e.g. "no double-claim", status transitions) enforced where the data lives, with the service layer staying a thin, testable pass-through                                                                                                       |
+| Transactions   | Any procedure touching more than one table (or requiring row locking) wraps its statements in an explicit SQL transaction (PL/pgSQL functions are atomic per call; multi-call sequences from the API use explicit `BEGIN`/`COMMIT` via a client checked out from the `pg` pool)              | Guarantees atomicity for multi-step operations (claim locking, completion updating claim+listing+reputation together) instead of relying on app-level sequencing                                                                                                                             |
+| Auth           | [Better Auth](https://www.better-auth.com/), mounted inside `apps/api`, with its Bearer plugin enabled     | Handles password hashing, session/token issuance, and email/password flows out of the box instead of hand-rolled JWT code; the Bearer plugin lets the two separate Next.js origins (`client`, `admin`) authenticate via `Authorization: Bearer <token>` without cookie/cross-origin headaches |
+| Geo/distance   | Plain `latitude`/`longitude` columns + Haversine formula, computed inside the browse stored procedure       | Good enough for city-scale sorting; avoids a PostGIS dependency for MVP scope                                                                                                                                                                                                                 |
+| Structure      | Phased milestones (M0–M7), each independently buildable/demoable                                           | Lets the project be built and tested incrementally instead of all-at-once                                                                                                                                                                                                                     |
 
 **New dependencies introduced:**
 
 - `apps/api`: `pg`, `@nestjs/config`, `better-auth`, `@nestjs/schedule`, `class-validator` + `class-transformer`
+- `apps/client` and `apps/admin`: `@tanstack/react-query`, `zod`, `better-auth/client` (Better Auth's client SDK, per §1's Auth decision)
 - New workspace package `packages/types` — shared enums (`UserRole`, `AccountStatus`, `ListingStatus`, `ClaimStatus`) and DTO/entity interfaces (`User`, `Listing`, `Claim`, `Reputation`) consumed by `api`, `client`, and `admin` — the `User` shape mirrors Better Auth's `user` model plus its custom `role`/`status`/`phone`/`verificationInfo` additional fields
 - Root `docker-compose.yml` for local Postgres + `.env` / `.env.example` (`DATABASE_URL`, `BETTER_AUTH_SECRET`, `BETTER_AUTH_URL`)
+- `apps/api/src/database/procedures/` — hand-written `.sql` files, one per stored procedure/function, applied as migrations alongside the schema (§2)
 
 ---
 
@@ -77,16 +81,119 @@ updated_at          timestamptz NOT NULL DEFAULT now()
 - `listings(latitude, longitude)` — supports the Haversine distance sort
 - Partial unique index `claims(listing_id) WHERE status = 'active'` — enforces "no double-claim" at the DB level, not just app logic
 
+**Stored procedures/functions** — one `.sql` file per routine under `apps/api/src/database/procedures/<domain>/`, each a `plpgsql` routine returning the row(s) the calling repository needs. Naming follows read/write: **`fn_`** for read-only functions, **`sp_`** for anything that writes:
+
+| Procedure                                | Folder        | Used by module | Notes                                                                                                                                            |
+| ----------------------------------------- | ------------- | --------------- | -------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `fn_browse_listings(lat, lng)`            | `listings/`   | Listings (M2)   | Haversine distance computed in-query, filters `status = 'available'`, sorts by distance/expiry                                                    |
+| `fn_get_listing_by_id(id, requester_id)`  | `listings/`   | Listings (M2)   | Returns `address_exact`/phone only when `requester_id` has an active claim on the listing                                                          |
+| `sp_create_listing(...)`                  | `listings/`   | Listings (M2)   | Validates `expires_at > prepared_at`, inserts, returns the row                                                                                     |
+| `sp_claim_listing(listing_id, taker_id)`  | `claims/`     | Claims (M3)     | `SELECT ... FOR UPDATE` + insert claim + update listing status, all inside one `plpgsql` function body — atomic by construction, backed by the partial unique index as a second line of defense |
+| `sp_complete_claim(claim_id, actor_id)`   | `claims/`     | Completion (M4) | Updates claim → `completed`, listing → `completed`, upserts `reputation` — one explicit transaction across all three                              |
+| `sp_expire_listings()`                    | `claims/`     | Cron (M3)       | Bulk-updates listings past `expires_at` with no active claim → `expired`                                                                          |
+| `sp_release_stale_claims()`               | `claims/`     | Cron (M3)       | Bulk-updates claims past `pickup_deadline` still `active` → `no_show`, reopens the listing                                                        |
+| `sp_recompute_reputation(user_id)`        | `reputation/` | Reputation (M5) | Recomputes `score` from `completed_count`/`no_show_count`                                                                                          |
+| `fn_stats_overview()`                     | `stats/`      | Stats (M4/M6)   | Aggregation query: total kg/servings, top donors, monthly trend, waste hotspots                                                                    |
+| `fn_list_accounts(status)`, `sp_approve_account(id)`, `sp_reject_account(id, reason)`, `sp_suspend_account(id)` | `accounts/` | Accounts (M1) | Drive the `pending → approved/rejected/suspended` state machine on Better Auth's `user` table additional fields |
+
 ---
 
-## 3. Module-by-module build plan (phased milestones)
+## 3. Backend architecture
+
+`apps/api/src/` follows a strict layering rule enforcing §1's "no inline SQL, thin service" decisions: **only one file per module — `<name>.repository.ts` — is allowed to call `DatabaseService`**, and `DatabaseService` itself is the **only** place in the whole app that issues raw SQL, and even there only ever `SELECT * FROM fn_x(...)` / `CALL sp_x(...)`-style calls into the procedures from §2 — never a hand-built query.
+
+```
+apps/api/src/
+├── main.ts
+├── app.module.ts
+│
+├── database/
+│   ├── database.module.ts
+│   ├── database.service.ts          # only place with raw sql (calls to fn_/sp_ only)
+│   └── procedures/
+│       ├── listings/
+│       │   ├── fn_browse_listings.sql
+│       │   ├── fn_get_listing_by_id.sql
+│       │   └── sp_create_listing.sql
+│       ├── claims/
+│       │   ├── sp_claim_listing.sql
+│       │   ├── sp_complete_claim.sql
+│       │   ├── sp_expire_listings.sql
+│       │   └── sp_release_stale_claims.sql
+│       ├── reputation/
+│       │   └── sp_recompute_reputation.sql
+│       ├── stats/
+│       │   └── fn_stats_overview.sql
+│       └── accounts/
+│           ├── fn_list_accounts.sql
+│           ├── sp_approve_account.sql
+│           ├── sp_reject_account.sql
+│           └── sp_suspend_account.sql
+│
+├── modules/
+│   ├── listings/
+│   │   ├── listings.module.ts
+│   │   ├── listings.controller.ts
+│   │   ├── listings.service.ts        # business logic as functions
+│   │   ├── listings.repository.ts     # only file in this module that touches DatabaseService
+│   │   ├── dto/
+│   │   │   ├── create-listing.dto.ts
+│   │   │   └── browse-listings.dto.ts
+│   │   └── interfaces/
+│   │       └── listing.interface.ts
+│   │
+│   ├── claims/
+│   │   ├── claims.module.ts
+│   │   ├── claims.controller.ts
+│   │   ├── claims.service.ts
+│   │   ├── claims.repository.ts
+│   │   ├── dto/
+│   │   └── interfaces/
+│   │
+│   ├── accounts/                      # admin approve/reject/suspend + pending queue
+│   │   ├── accounts.module.ts
+│   │   ├── accounts.controller.ts
+│   │   ├── accounts.service.ts
+│   │   ├── accounts.repository.ts
+│   │   ├── dto/
+│   │   └── interfaces/
+│   │
+│   ├── stats/
+│   │   ├── stats.module.ts
+│   │   ├── stats.controller.ts
+│   │   ├── stats.service.ts
+│   │   ├── stats.repository.ts
+│   │   └── interfaces/
+│   │
+│   └── auth/                          # Better Auth mount + RolesGuard/StatusGuard
+│       ├── auth.module.ts
+│       ├── auth.controller.ts         # thin wrapper only where Better Auth needs a custom hook
+│       └── guards/
+│           ├── roles.guard.ts
+│           └── status.guard.ts
+│
+└── common/
+    ├── filters/
+    ├── interceptors/
+    ├── guards/
+    └── decorators/
+```
+
+Layering rule, top to bottom: `*.controller.ts` (HTTP + DTO validation) → `*.service.ts` (business logic as thin functions, one per operation, per §1's "Business logic" decision) → `*.repository.ts` (translates service calls into `DatabaseService.call('fn_x'|'sp_x', params)`) → `DatabaseService` (the sole `pg` boundary) → the stored procedure. No controller or service ever imports `DatabaseService` directly.
+
+The `auth` module has no `repository.ts` — Better Auth owns its own tables (`user`/`session`/`account`/`verification`) and query layer internally; `accounts` module's repository is what calls the `accounts/` procedures operating on Better Auth's `user` table additional fields.
+
+---
+
+## 4. Module-by-module build plan (phased milestones)
 
 ### M0 — Repo foundation
 
 - `docker-compose.yml` for local Postgres
 - `packages/types` workspace package (mirrors the conventions in `packages/ui`, `packages/eslint-config`)
 - `@nestjs/config` env loading in `apps/api`
-- Migration tool wired up + initial migration from §2
+- Migration tool wired up + initial migration from §2 (tables) plus a migration step that applies every `.sql` file under `apps/api/src/database/procedures/<domain>/`
+- `database.module.ts` + `database.service.ts` (§3): wraps the `pg` `Pool`, exposes one method used only to invoke `fn_*`/`sp_*` procedures — the sole raw-SQL boundary in the app
 - `common/` module in `apps/api`: global exception filter, response interceptor
 
 ### M1 — Auth & Approval
@@ -100,27 +207,27 @@ updated_at          timestamptz NOT NULL DEFAULT now()
 
 ### M2 — Listings
 
-- `listings` module: create (approved posters only), browse/list with Haversine distance sort + expiry sort
+- `listings` module: `create()`/`browse()` service functions are thin wrappers calling `sp_create_listing`/`sp_browse_listings` (approved posters only for create; Haversine distance sort + expiry sort done inside `sp_browse_listings`)
 - Address exposure rule: `address_approx` always returned, `address_exact` withheld until a claim exists (enforced in M3)
 - Frontend: "new listing" form + browse feed in `apps/client`
 
 ### M3 — Claims + Contact reveal
 
-- `claims` module: claim endpoint runs inside a DB transaction (`SELECT ... FOR UPDATE` plus the partial unique index) so two simultaneous claims on one listing can't both succeed
+- `claims` module: `claim()` service function calls `sp_claim_listing`, which does the `SELECT ... FOR UPDATE` + insert claim + update listing status atomically inside one `plpgsql` function body (backed by the partial unique index) so two simultaneous claims on one listing can't both succeed
 - Pickup countdown (`pickup_deadline`) set on claim
-- `@nestjs/schedule` cron jobs: auto-expire listings past `expires_at` with no claim; auto-release claims past `pickup_deadline` still `active` (listing reopens, claim → `no_show`)
+- `@nestjs/schedule` cron jobs call `sp_expire_listings()` / `sp_release_stale_claims()` on a schedule — no logic duplicated in TypeScript
 - Contact reveal is a **serialization rule**, not a separate module: listing/claim responses include the poster's `phone` + `address_exact` only when the requesting taker has an `active` claim on that listing
 - Frontend: claim button + live countdown + revealed contact card in `apps/client`
 
 ### M4 — Completion & Stats
 
-- Mark-completed endpoint, callable by either poster or taker on an active claim
-- Aggregation queries: total kg/servings rescued, per-donor totals, monthly trend, waste hotspots (expired-unclaimed listings grouped by area)
+- Mark-completed endpoint: `complete()` service function calls `sp_complete_claim`, which updates claim + listing + reputation in one transaction, callable by either poster or taker on an active claim
+- `stats` module: `overview()` service function calls `sp_stats_overview()` for total kg/servings rescued, per-donor totals, monthly trend, waste hotspots (expired-unclaimed listings grouped by area)
 - Frontend: "mark completed" action in `apps/client`; stats surfaced in `apps/admin`
 
 ### M5 — Reputation
 
-- Score recompute triggered on claim completion (taker reliability, poster trust) and on no-show
+- `sp_recompute_reputation` called from `sp_complete_claim` on completion, and from `sp_release_stale_claims` on no-show
 - Exposed on user profile API responses
 
 ### M6 — Admin dashboard & disputes
@@ -137,7 +244,7 @@ updated_at          timestamptz NOT NULL DEFAULT now()
 
 ---
 
-## 4. API surface summary
+## 5. API surface summary
 
 | Method | Path                             | Role              | Purpose                                                      |
 | ------ | -------------------------------- | ----------------- | ------------------------------------------------------------ |
@@ -157,7 +264,93 @@ updated_at          timestamptz NOT NULL DEFAULT now()
 
 ---
 
-## 5. Frontend page map
+## 6. Frontend architecture
+
+Both `apps/client/src/` and `apps/admin/src/` follow this same structure independently — no cross-app frontend package; shared UI primitives still come from `packages/ui` per the existing repo convention. The App Router (`app/`) stays thin (routes only); all data-fetching, mutations, and forms live in `features/<domain>/`.
+
+Reference structure (identical shape for both apps):
+
+```
+src/
+├── app/                                # next.js app router (routes only, thin)
+│   ├── (auth)/
+│   │   ├── login/page.tsx
+│   │   └── register/page.tsx
+│   ├── (dashboard)/
+│   │   ├── posts/
+│   │   │   ├── page.tsx
+│   │   │   └── [id]/page.tsx
+│   │   └── layout.tsx
+│   ├── layout.tsx
+│   └── providers.tsx                  # react query provider lives here
+│
+├── features/                          # one folder per domain/feature
+│   ├── auth/
+│   │   ├── api/
+│   │   │   └── auth.api.ts            # raw fetch/axios calls
+│   │   ├── hooks/
+│   │   │   ├── use-login.ts
+│   │   │   ├── use-register.ts
+│   │   │   └── use-current-user.ts
+│   │   ├── components/
+│   │   │   ├── login-form.tsx
+│   │   │   └── register-form.tsx
+│   │   ├── schema/
+│   │   │   └── auth.schema.ts         # zod schemas
+│   │   └── types.ts
+│   │
+│   └── posts/
+│       ├── api/
+│       │   └── posts.api.ts
+│       ├── hooks/
+│       │   ├── use-posts.ts           # list (useQuery)
+│       │   ├── use-post.ts            # detail (useQuery)
+│       │   ├── use-create-post.ts     # useMutation
+│       │   ├── use-update-post.ts     # useMutation
+│       │   └── use-delete-post.ts     # useMutation
+│       ├── components/
+│       │   ├── post-list.tsx
+│       │   ├── post-card.tsx
+│       │   └── post-form.tsx
+│       └── types.ts
+│
+├── components/
+│   ├── ui/                            # shadcn generated components
+│   └── shared/                        # cross-feature shared components
+│
+├── hooks/                             # generic hooks, not feature-specific
+│   ├── use-debounce.ts
+│   └── use-media-query.ts
+│
+├── lib/
+│   ├── api-client.ts                  # fetch wrapper (base url, auth headers, error handling)
+│   ├── query-client.ts                # QueryClient instance + default options
+│   ├── query-keys.ts                  # centralized query key factory
+│   ├── auth.ts                        # betterauth config
+│   └── utils.ts
+│
+└── types/
+    └── global.d.ts
+```
+
+**Mapped onto FoodBridge's domains** (mirrors the backend modules in §3/§4/§5):
+
+- `apps/client/src/features/`: `auth/`, `listings/` (create + browse, mirrors the sample `posts/` feature 1:1), `claims/` (claim action, countdown, revealed contact card)
+- `apps/admin/src/features/`: `auth/`, `accounts/` (pending queue, approve/reject/suspend), `stats/` (dashboards), `disputes/`
+- Route groups follow the page map in §7: `(auth)/login`, `(auth)/signup` for both apps; `(dashboard)/listings`, `(dashboard)/listings/new`, `(dashboard)/listings/[id]`, `(dashboard)/my-listings`, `(dashboard)/my-claims` for `client`; `(dashboard)/accounts`, `(dashboard)/accounts/[id]`, `(dashboard)/stats`, `(dashboard)/disputes` for `admin`
+
+**`lib/` layer, per app:**
+
+- `api-client.ts` — thin fetch/axios wrapper: base URL from env, attaches the Better Auth Bearer token (per §1's Bearer-plugin decision), central error handling raising typed errors consumed by TanStack Query
+- `query-client.ts` + `app/providers.tsx` — one `QueryClient` per app, mounted in `providers.tsx`, default `staleTime`/`retry` options set once here
+- `query-keys.ts` — centralized query-key factory per feature (e.g. `listingKeys.all`, `listingKeys.detail(id)`) so hooks and mutation invalidation stay consistent
+- `auth.ts` — Better Auth **client** config (`createAuthClient` pointed at `apps/api`'s Better Auth mount + Bearer plugin), consumed by `features/auth/hooks/use-login.ts`, `use-current-user.ts`, etc.
+
+`features/<name>/schema/*.schema.ts` holds Zod schemas for form validation, shared between the form component and its mutation hook's input type.
+
+---
+
+## 7. Frontend page map
 
 **`apps/client`:** `/signup`, `/login`, `/listings` (browse), `/listings/new`, `/listings/[id]`, `/my-listings`, `/my-claims`
 
@@ -165,7 +358,7 @@ updated_at          timestamptz NOT NULL DEFAULT now()
 
 ---
 
-## 6. Verification approach
+## 8. Verification approach
 
 - `bun turbo build`, `turbo check-types`, `turbo lint` must stay green after every milestone
 - Manual smoke test per milestone, e.g. M3: open two browser sessions as different takers and race to claim the same listing — only one should succeed and the other should get a clear "already claimed" error
@@ -177,5 +370,7 @@ updated_at          timestamptz NOT NULL DEFAULT now()
 
 - `plan/concept.md` — keep terminology identical (`pending/approved/rejected/suspended`, `available/claimed/completed/expired`, `active/completed/no_show`)
 - `apps/api/src/app.module.ts`, `apps/api/package.json` — NestJS baseline new modules attach to
-- `apps/client/app/`, `apps/admin/app/` — Next.js App Router baseline
+- `apps/api/src/database/procedures/<domain>/*.sql` — one stored procedure/function per domain operation (§2), grouped by domain folder; every `<name>.repository.ts` maps 1:1 to a subset of these (§3)
+- `apps/api/src/modules/{listings,claims,accounts,stats,auth}/` — one module per domain, each following the controller → service → repository layering in §3
+- `apps/client/src/{app,features,components,hooks,lib,types}`, `apps/admin/src/{app,features,components,hooks,lib,types}` — frontend baseline structure (§5)
 - `packages/ui/src/*`, `packages/eslint-config/*`, `packages/typescript-config/*` — existing shared-package conventions to mirror for `packages/types`
