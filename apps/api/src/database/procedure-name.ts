@@ -8,4 +8,7 @@ export type ProcedureName =
   | 'fn_list_accounts'
   | 'sp_approve_account'
   | 'sp_reject_account'
-  | 'sp_suspend_account';
+  | 'sp_suspend_account'
+  | 'fn_browse_listings'
+  | 'fn_get_listing_by_id'
+  | 'sp_create_listing';
