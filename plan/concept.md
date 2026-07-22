@@ -12,11 +12,11 @@ Restaurants, cafes, caterers, and event organizers regularly end up with surplus
 
 ## 2. Actors in the System
 
-| Role | Who they are | What they do |
-|---|---|---|
-| **Food Poster** | Restaurants, cafes, caterers, event organizers, households with excess food | Create food listings when they have surplus |
-| **Food Taker** | NGOs, shelters, individuals nearby | Browse and claim available listings |
-| **Admin** | Platform moderator | Approves/rejects poster & taker accounts, handles disputes, monitors platform health |
+| Role            | Who they are                                                                | What they do                                                                         |
+| --------------- | --------------------------------------------------------------------------- | ------------------------------------------------------------------------------------ |
+| **Food Poster** | Restaurants, cafes, caterers, event organizers, households with excess food | Create food listings when they have surplus                                          |
+| **Food Taker**  | NGOs, shelters, individuals nearby                                          | Browse and claim available listings                                                  |
+| **Admin**       | Platform moderator                                                          | Approves/rejects poster & taker accounts, handles disputes, monitors platform health |
 
 ---
 
@@ -65,7 +65,7 @@ Approval happens **once, at account level** — not per listing or per claim.
 - Coordination happens over a direct phone call — realistic for time-sensitive physical handoffs
 - No in-app chat/messaging system needed — keeps scope focused on core SQL logic rather than real-time infra
 
-*(Future scope idea: masked/proxy contact numbers like ride-sharing apps, for production-level privacy — worth a mention in the report's "Future Scope" section.)*
+_(Future scope idea: masked/proxy contact numbers like ride-sharing apps, for production-level privacy — worth a mention in the report's "Future Scope" section.)_
 
 ---
 

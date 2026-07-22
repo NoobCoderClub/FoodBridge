@@ -1,1 +1,1 @@
-bun run lint && bun run format && bun run build
+bun run lint && bun run build

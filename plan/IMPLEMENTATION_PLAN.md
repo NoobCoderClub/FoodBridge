@@ -8,14 +8,15 @@ The repo currently is pure `create-turbo` scaffolding (default Next.js pages in 
 
 ## 1. Foundational decisions
 
-| Area | Decision | Why |
-|---|---|---|
-| DB access | Plain [`pg`](https://node-postgres.com/) driver, hand-written parameterized SQL — no ORM, no query builder | Matches concept.md's "raw SQL against PostgreSQL" intent literally; keeps query logic visible and reviewable |
-| Auth | [Better Auth](https://www.better-auth.com/), mounted inside `apps/api`, with its Bearer plugin enabled | Handles password hashing, session/token issuance, and email/password flows out of the box instead of hand-rolled JWT code; the Bearer plugin lets the two separate Next.js origins (`client`, `admin`) authenticate via `Authorization: Bearer <token>` without cookie/cross-origin headaches |
-| Geo/distance | Plain `latitude`/`longitude` columns + Haversine formula in SQL | Good enough for city-scale sorting; avoids a PostGIS dependency for MVP scope |
-| Structure | Phased milestones (M0–M7), each independently buildable/demoable | Lets the project be built and tested incrementally instead of all-at-once |
+| Area         | Decision                                                                                                   | Why                                                                                                                                                                                                                                                                                           |
+| ------------ | ---------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| DB access    | Plain [`pg`](https://node-postgres.com/) driver, hand-written parameterized SQL — no ORM, no query builder | Matches concept.md's "raw SQL against PostgreSQL" intent literally; keeps query logic visible and reviewable                                                                                                                                                                                  |
+| Auth         | [Better Auth](https://www.better-auth.com/), mounted inside `apps/api`, with its Bearer plugin enabled     | Handles password hashing, session/token issuance, and email/password flows out of the box instead of hand-rolled JWT code; the Bearer plugin lets the two separate Next.js origins (`client`, `admin`) authenticate via `Authorization: Bearer <token>` without cookie/cross-origin headaches |
+| Geo/distance | Plain `latitude`/`longitude` columns + Haversine formula in SQL                                            | Good enough for city-scale sorting; avoids a PostGIS dependency for MVP scope                                                                                                                                                                                                                 |
+| Structure    | Phased milestones (M0–M7), each independently buildable/demoable                                           | Lets the project be built and tested incrementally instead of all-at-once                                                                                                                                                                                                                     |
 
 **New dependencies introduced:**
+
 - `apps/api`: `pg`, `@nestjs/config`, `better-auth`, `@nestjs/schedule`, `class-validator` + `class-transformer`
 - New workspace package `packages/types` — shared enums (`UserRole`, `AccountStatus`, `ListingStatus`, `ClaimStatus`) and DTO/entity interfaces (`User`, `Listing`, `Claim`, `Reputation`) consumed by `api`, `client`, and `admin` — the `User` shape mirrors Better Auth's `user` model plus its custom `role`/`status`/`phone`/`verificationInfo` additional fields
 - Root `docker-compose.yml` for local Postgres + `.env` / `.env.example` (`DATABASE_URL`, `BETTER_AUTH_SECRET`, `BETTER_AUTH_URL`)
@@ -71,6 +72,7 @@ updated_at          timestamptz NOT NULL DEFAULT now()
 ```
 
 **Indexes / constraints:**
+
 - `listings(status, expires_at)` — fast lookup of live/expiring listings for browse + the auto-expire cron
 - `listings(latitude, longitude)` — supports the Haversine distance sort
 - Partial unique index `claims(listing_id) WHERE status = 'active'` — enforces "no double-claim" at the DB level, not just app logic
@@ -80,6 +82,7 @@ updated_at          timestamptz NOT NULL DEFAULT now()
 ## 3. Module-by-module build plan (phased milestones)
 
 ### M0 — Repo foundation
+
 - `docker-compose.yml` for local Postgres
 - `packages/types` workspace package (mirrors the conventions in `packages/ui`, `packages/eslint-config`)
 - `@nestjs/config` env loading in `apps/api`
@@ -87,6 +90,7 @@ updated_at          timestamptz NOT NULL DEFAULT now()
 - `common/` module in `apps/api`: global exception filter, response interceptor
 
 ### M1 — Auth & Approval
+
 - Better Auth mounted inside `apps/api` (email/password + Bearer plugin), plus an `accounts` module for the domain-specific pieces Better Auth doesn't know about
 - Signup via Better Auth's `signUp.email`, with a database hook defaulting new users to `pending`
 - Login via Better Auth's `signIn.email`, issuing a Bearer session token (no hand-rolled JWT)
@@ -95,11 +99,13 @@ updated_at          timestamptz NOT NULL DEFAULT now()
 - Frontend: signup + login pages in `apps/client` (via Better Auth's client SDK); pending-accounts review screen in `apps/admin`
 
 ### M2 — Listings
+
 - `listings` module: create (approved posters only), browse/list with Haversine distance sort + expiry sort
 - Address exposure rule: `address_approx` always returned, `address_exact` withheld until a claim exists (enforced in M3)
 - Frontend: "new listing" form + browse feed in `apps/client`
 
 ### M3 — Claims + Contact reveal
+
 - `claims` module: claim endpoint runs inside a DB transaction (`SELECT ... FOR UPDATE` plus the partial unique index) so two simultaneous claims on one listing can't both succeed
 - Pickup countdown (`pickup_deadline`) set on claim
 - `@nestjs/schedule` cron jobs: auto-expire listings past `expires_at` with no claim; auto-release claims past `pickup_deadline` still `active` (listing reopens, claim → `no_show`)
@@ -107,18 +113,22 @@ updated_at          timestamptz NOT NULL DEFAULT now()
 - Frontend: claim button + live countdown + revealed contact card in `apps/client`
 
 ### M4 — Completion & Stats
+
 - Mark-completed endpoint, callable by either poster or taker on an active claim
 - Aggregation queries: total kg/servings rescued, per-donor totals, monthly trend, waste hotspots (expired-unclaimed listings grouped by area)
 - Frontend: "mark completed" action in `apps/client`; stats surfaced in `apps/admin`
 
 ### M5 — Reputation
+
 - Score recompute triggered on claim completion (taker reliability, poster trust) and on no-show
 - Exposed on user profile API responses
 
 ### M6 — Admin dashboard & disputes
+
 - `apps/admin` pages: pending accounts queue, suspend/reactivate action, platform dashboards (total kg rescued, top donors, monthly trend, hotspots) built on M4/M5 queries
 
 ### M7 — Hardening & tests
+
 - Unit tests per service (auth, listings, claims, reputation)
 - One e2e test specifically for the double-claim race condition
 - Seed script for demo data
@@ -129,21 +139,21 @@ updated_at          timestamptz NOT NULL DEFAULT now()
 
 ## 4. API surface summary
 
-| Method | Path | Role | Purpose |
-|---|---|---|---|
-| POST | `/api/auth/sign-up/email` | public | Better Auth's built-in signup → our hook sets `pending` |
-| POST | `/api/auth/sign-in/email` | public | Better Auth's built-in login → issues a Bearer session token |
-| POST | `/api/auth/sign-out` | authenticated | Better Auth's built-in session revocation |
-| GET | `/admin/accounts?status=pending` | admin | List accounts awaiting review |
-| PATCH | `/admin/accounts/:id/approve` | admin | Approve account |
-| PATCH | `/admin/accounts/:id/reject` | admin | Reject account (with reason) |
-| PATCH | `/admin/accounts/:id/suspend` | admin | Suspend an approved account |
-| POST | `/listings` | poster (approved) | Create a listing |
-| GET | `/listings` | taker (approved) | Browse, sorted by distance/expiry |
-| GET | `/listings/:id` | taker (approved) | View one listing (exact address hidden unless claimed) |
-| POST | `/listings/:id/claim` | taker (approved) | Claim a listing (locks it) |
-| PATCH | `/claims/:id/complete` | poster or taker | Mark pickup completed |
-| GET | `/stats/overview` | admin | Total kg rescued, top donors, trends, hotspots |
+| Method | Path                             | Role              | Purpose                                                      |
+| ------ | -------------------------------- | ----------------- | ------------------------------------------------------------ |
+| POST   | `/api/auth/sign-up/email`        | public            | Better Auth's built-in signup → our hook sets `pending`      |
+| POST   | `/api/auth/sign-in/email`        | public            | Better Auth's built-in login → issues a Bearer session token |
+| POST   | `/api/auth/sign-out`             | authenticated     | Better Auth's built-in session revocation                    |
+| GET    | `/admin/accounts?status=pending` | admin             | List accounts awaiting review                                |
+| PATCH  | `/admin/accounts/:id/approve`    | admin             | Approve account                                              |
+| PATCH  | `/admin/accounts/:id/reject`     | admin             | Reject account (with reason)                                 |
+| PATCH  | `/admin/accounts/:id/suspend`    | admin             | Suspend an approved account                                  |
+| POST   | `/listings`                      | poster (approved) | Create a listing                                             |
+| GET    | `/listings`                      | taker (approved)  | Browse, sorted by distance/expiry                            |
+| GET    | `/listings/:id`                  | taker (approved)  | View one listing (exact address hidden unless claimed)       |
+| POST   | `/listings/:id/claim`            | taker (approved)  | Claim a listing (locks it)                                   |
+| PATCH  | `/claims/:id/complete`           | poster or taker   | Mark pickup completed                                        |
+| GET    | `/stats/overview`                | admin             | Total kg rescued, top donors, trends, hotspots               |
 
 ---
 
