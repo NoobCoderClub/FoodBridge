@@ -7,6 +7,7 @@ export interface Claim {
   claimed_at: string;
   pickup_deadline: string;
   status: ClaimStatus;
+  completed_at: string | null;
 }
 
 export interface MyClaim {

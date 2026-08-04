@@ -29,4 +29,5 @@ export interface ListingDetail {
   status: ListingStatus;
   created_at: string;
   poster_phone: string | null;
+  active_claim_id: string | null;
 }

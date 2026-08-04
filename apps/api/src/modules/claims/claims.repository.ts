@@ -18,6 +18,14 @@ export class ClaimsRepository {
     return this.db.callFunction<MyClaim>('fn_list_my_claims', [takerId]);
   }
 
+  async complete(claimId: string, actorId: string): Promise<Claim> {
+    const [claim] = await this.db.callFunction<Claim>('sp_complete_claim', [
+      claimId,
+      actorId,
+    ]);
+    return claim;
+  }
+
   async expireListings(): Promise<void> {
     await this.db.callFunction<Record<string, never>>('sp_expire_listings', []);
   }
