@@ -3,14 +3,17 @@
 import { useRouter } from 'next/navigation';
 import { useEffect } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
+import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { useCurrentUser } from '@/features/auth/hooks/use-current-user';
+import { useLogout } from '@/features/auth/hooks/use-logout';
 import { authKeys } from '@/lib/query-keys';
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const queryClient = useQueryClient();
   const { data: user, isLoading } = useCurrentUser();
+  const logout = useLogout();
 
   useEffect(() => {
     if (!isLoading && !user) router.replace('/login');
@@ -59,5 +62,37 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     );
   }
 
-  return <>{children}</>;
+  return (
+    <div className="flex min-h-screen flex-col">
+      <nav className="flex items-center gap-4 border-b border-gray-200 px-6 py-4">
+        <Link href="/listings" className="font-semibold">
+          FoodBridge
+        </Link>
+        {user.role === 'poster' ? (
+          <Link href="/listings/new" className="text-sm">
+            Post a listing
+          </Link>
+        ) : (
+          <>
+            <Link href="/listings" className="text-sm">
+              Browse
+            </Link>
+            <Link href="/my-claims" className="text-sm">
+              My claims
+            </Link>
+          </>
+        )}
+        <Button
+          variant="ghost"
+          size="sm"
+          className="ml-auto"
+          onClick={() => logout.mutate()}
+          disabled={logout.isPending}
+        >
+          Log out
+        </Button>
+      </nav>
+      <div className="flex-1">{children}</div>
+    </div>
+  );
 }
