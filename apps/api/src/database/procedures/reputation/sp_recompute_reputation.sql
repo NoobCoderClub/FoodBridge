@@ -1,11 +1,15 @@
 -- Adds the given deltas to a user's reputation counters and recomputes
--- `score` in one statement. Called from other procedures (sp_complete_claim,
--- sp_release_stale_claims), never from the API layer directly.
+-- `score` in the same statement. Called from other procedures
+-- (sp_complete_claim, sp_release_stale_claims), never from the API layer.
 --
--- The insert's own values double as the upsert delta: ON CONFLICT reads them
--- back via `excluded` and adds them to the existing row, so the same
--- statement handles both "first reputation event for this user" and
--- "another one on top of an existing row".
+-- Deliberately a single INSERT ... ON CONFLICT rather than an upsert CTE
+-- followed by a second UPDATE: every statement inside one WITH clause runs
+-- against the same initial snapshot, so a follow-up UPDATE scanning
+-- `reputation` for a row a sibling CTE just inserted would find nothing for
+-- a brand-new user (confirmed against a live instance — that exact two-
+-- statement shape silently left `score` at its placeholder 0). Computing
+-- `score` directly in both the INSERT's VALUES and the ON CONFLICT's SET
+-- avoids the problem entirely.
 create or replace function sp_recompute_reputation(
   p_user_id uuid,
   p_completed_delta integer default 0,
@@ -14,23 +18,23 @@ create or replace function sp_recompute_reputation(
 returns void
 language sql
 as $$
-  with upserted as (
-    insert into reputation (user_id, completed_count, no_show_count, score, updated_at)
-    values (
-      p_user_id,
-      greatest(p_completed_delta, 0),
-      greatest(p_no_show_delta, 0),
-      0,
-      now()
-    )
-    on conflict (user_id) do update
-    set completed_count = reputation.completed_count + excluded.completed_count,
-        no_show_count = reputation.no_show_count + excluded.no_show_count,
-        updated_at = now()
-    returning user_id, completed_count, no_show_count
+  insert into reputation (user_id, completed_count, no_show_count, score, updated_at)
+  values (
+    p_user_id,
+    greatest(p_completed_delta, 0),
+    greatest(p_no_show_delta, 0),
+    greatest(p_completed_delta, 0)::numeric
+      / greatest(greatest(p_completed_delta, 0) + greatest(p_no_show_delta, 0), 1),
+    now()
   )
-  update reputation r
-  set score = u.completed_count::numeric / greatest(u.completed_count + u.no_show_count, 1)
-  from upserted u
-  where r.user_id = u.user_id;
+  on conflict (user_id) do update
+  set completed_count = reputation.completed_count + excluded.completed_count,
+      no_show_count = reputation.no_show_count + excluded.no_show_count,
+      score = (reputation.completed_count + excluded.completed_count)::numeric
+        / greatest(
+            (reputation.completed_count + excluded.completed_count)
+              + (reputation.no_show_count + excluded.no_show_count),
+            1
+          ),
+      updated_at = now();
 $$;
