@@ -1,3 +1,6 @@
+-- Available listings, nearest first. With no caller coordinates every
+-- distance is null, so the sort falls through to `expires_at` on its own —
+-- no separate no-location branch needed.
 create or replace function fn_browse_listings(p_lat double precision, p_lng double precision)
 returns table (
   id uuid,
@@ -26,19 +29,8 @@ as $$
     l.expires_at,
     l.status,
     l.created_at,
-    case
-      when p_lat is null or p_lng is null then null
-      else 6371 * acos(
-        least(1.0, greatest(-1.0,
-          cos(radians(p_lat)) * cos(radians(l.latitude)) * cos(radians(l.longitude) - radians(p_lng))
-          + sin(radians(p_lat)) * sin(radians(l.latitude))
-        ))
-      )
-    end as distance_km
+    fn_distance_km(p_lat, p_lng, l.latitude, l.longitude) as distance_km
   from listings l
   where l.status = 'available'
-  order by
-    case when p_lat is null or p_lng is null then l.expires_at end asc nulls last,
-    distance_km asc nulls last,
-    l.expires_at asc;
+  order by distance_km asc nulls last, l.expires_at asc;
 $$;

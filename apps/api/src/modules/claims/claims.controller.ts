@@ -1,4 +1,4 @@
-import { Controller, Get, Req, UseGuards } from '@nestjs/common';
+import { Controller, Get, Param, Patch, Req, UseGuards } from '@nestjs/common';
 import { AuthGuard } from '../auth/guards/auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { StatusGuard } from '../auth/guards/status.guard';
@@ -15,5 +15,11 @@ export class ClaimsController {
   @Roles('taker')
   listMine(@Req() req: AuthenticatedRequest) {
     return this.claimsService.listMine(req.user.id);
+  }
+
+  @Patch(':id/complete')
+  @Roles('poster', 'taker')
+  complete(@Param('id') id: string, @Req() req: AuthenticatedRequest) {
+    return this.claimsService.complete(id, req.user.id);
   }
 }

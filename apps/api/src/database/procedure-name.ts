@@ -15,4 +15,6 @@ export type ProcedureName =
   | 'sp_claim_listing'
   | 'sp_expire_listings'
   | 'sp_release_stale_claims'
-  | 'fn_list_my_claims';
+  | 'fn_list_my_claims'
+  | 'sp_complete_claim'
+  | 'fn_stats_overview';

@@ -1,49 +1,26 @@
-import { readdirSync, readFileSync } from 'node:fs';
-import { dirname, join } from 'node:path';
-import { fileURLToPath } from 'node:url';
-
-const PROCEDURES_DIR = join(
-  dirname(fileURLToPath(import.meta.url)),
-  '..',
-  'src',
-  'database',
-  'procedures',
-);
-
-function listProcedureFiles() {
-  const files = [];
-  for (const domain of readdirSync(PROCEDURES_DIR, { withFileTypes: true })) {
-    if (!domain.isDirectory()) continue;
-    const domainDir = join(PROCEDURES_DIR, domain.name);
-    for (const file of readdirSync(domainDir)) {
-      if (file.endsWith('.sql')) files.push(join(domainDir, file));
-    }
-  }
-  return files.sort();
-}
-
 /**
  * @type {import('node-pg-migrate').ColumnDefinitions | undefined}
  */
 export const shorthands = undefined;
 
 /**
- * Applies every hand-written stored procedure/function under
- * `src/database/procedures/<domain>/*.sql`. This is the one procedure-apply
- * mechanism for the whole app — every later milestone's new `.sql` files are
- * picked up here automatically; do not add a second mechanism.
+ * M0 created the `src/database/procedures/<domain>/` directories but no
+ * procedures yet — the first ones arrive with the accounts module in M1. This
+ * migration is therefore intentionally empty.
  *
- * @param pgm {import('node-pg-migrate').MigrationBuilder}
+ * It previously globbed *every* `.sql` file under `procedures/`, which meant it
+ * retroactively picked up later milestones' files and tried to create
+ * `fn_list_accounts` — a `language sql` body selecting from `"user"`, validated
+ * by Postgres at creation time — two migrations before Better Auth creates that
+ * table. That broke `migrate:up` on any fresh database. Each milestone's
+ * procedures are now applied by its own migration, scoped to a single domain;
+ * see `migrations/lib/apply-procedures.js`.
+ *
  * @returns {Promise<void> | void}
  */
-export const up = (pgm) => {
-  for (const file of listProcedureFiles()) {
-    pgm.sql(readFileSync(file, 'utf8'));
-  }
-};
+export const up = () => {};
 
 /**
- * @param pgm {import('node-pg-migrate').MigrationBuilder}
  * @returns {Promise<void> | void}
  */
 export const down = () => {};

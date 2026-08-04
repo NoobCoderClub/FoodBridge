@@ -14,6 +14,10 @@ export class ClaimsService {
     return this.claimsRepository.listMine(takerId);
   }
 
+  complete(claimId: string, actorId: string): Promise<Claim> {
+    return this.claimsRepository.complete(claimId, actorId);
+  }
+
   expireListings(): Promise<void> {
     return this.claimsRepository.expireListings();
   }

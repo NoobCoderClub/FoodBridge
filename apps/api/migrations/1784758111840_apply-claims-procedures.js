@@ -1,26 +1,14 @@
-import { readdirSync, readFileSync } from 'node:fs';
-import { dirname, join } from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { applyProcedures, dropProcedures } from './lib/apply-procedures.js';
 
-const PROCEDURES_DIR = join(
-  dirname(fileURLToPath(import.meta.url)),
-  '..',
-  'src',
-  'database',
-  'procedures',
-);
-
-function listProcedureFiles() {
-  const files = [];
-  for (const domain of readdirSync(PROCEDURES_DIR, { withFileTypes: true })) {
-    if (!domain.isDirectory()) continue;
-    const domainDir = join(PROCEDURES_DIR, domain.name);
-    for (const file of readdirSync(domainDir)) {
-      if (file.endsWith('.sql')) files.push(join(domainDir, file));
-    }
-  }
-  return files.sort();
-}
+/**
+ * Claim/expiry procedures added in M3. `fn_list_my_claims` is deliberately
+ * excluded — it arrives in the next migration.
+ */
+const PROCEDURES = [
+  'sp_claim_listing',
+  'sp_expire_listings',
+  'sp_release_stale_claims',
+];
 
 /**
  * @type {import('node-pg-migrate').ColumnDefinitions | undefined}
@@ -28,20 +16,17 @@ function listProcedureFiles() {
 export const shorthands = undefined;
 
 /**
- * Re-runs the M0 procedure-apply mechanism (`CREATE OR REPLACE`, so safe to
- * re-run) to pick up the claims procedures added in M3.
- *
  * @param pgm {import('node-pg-migrate').MigrationBuilder}
  * @returns {Promise<void> | void}
  */
 export const up = (pgm) => {
-  for (const file of listProcedureFiles()) {
-    pgm.sql(readFileSync(file, 'utf8'));
-  }
+  applyProcedures(pgm, 'claims', PROCEDURES);
 };
 
 /**
  * @param pgm {import('node-pg-migrate').MigrationBuilder}
  * @returns {Promise<void> | void}
  */
-export const down = () => {};
+export const down = (pgm) => {
+  dropProcedures(pgm, 'claims', PROCEDURES);
+};
