@@ -7,3 +7,7 @@ export const accountKeys = {
   list: (status?: string) => ['accounts', 'list', status ?? 'all'] as const,
   detail: (id: string) => ['accounts', 'detail', id] as const,
 };
+
+export const statsKeys = {
+  overview: ['stats', 'overview'] as const,
+};
