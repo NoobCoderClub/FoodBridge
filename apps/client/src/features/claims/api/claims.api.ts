@@ -8,3 +8,7 @@ export function claimListing(listingId: string) {
 export function getMyClaims() {
   return apiFetch<MyClaim[]>('/claims/mine');
 }
+
+export function completeClaim(claimId: string) {
+  return apiFetch<Claim>(`/claims/${claimId}/complete`, { method: 'PATCH' });
+}

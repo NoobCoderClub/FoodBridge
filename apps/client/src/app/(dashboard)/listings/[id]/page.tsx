@@ -5,6 +5,7 @@ import { useListing } from '@/features/listings/hooks/use-listing';
 import { useCurrentUser } from '@/features/auth/hooks/use-current-user';
 import { useMyClaims } from '@/features/claims/hooks/use-my-claims';
 import { ClaimButton } from '@/features/claims/components/claim-button';
+import { CompleteButton } from '@/features/claims/components/complete-button';
 import { ContactCard } from '@/features/claims/components/contact-card';
 
 export default function ListingDetailPage({ params }: { params: Promise<{ id: string }> }) {
@@ -47,6 +48,7 @@ export default function ListingDetailPage({ params }: { params: Promise<{ id: st
           pickupDeadline={myActiveClaim.pickup_deadline}
         />
       ) : null}
+      {listing.active_claim_id ? <CompleteButton claimId={listing.active_claim_id} /> : null}
     </main>
   );
 }
