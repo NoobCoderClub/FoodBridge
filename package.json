@@ -11,6 +11,7 @@
     "migrate:up": "bun run --cwd apps/api migrate:up",
     "migrate:down": "bun run --cwd apps/api migrate:down",
     "migrate:create": "bun run --cwd apps/api migrate:create",
+    "create-admin": "bun run --cwd apps/api create-admin",
     "prepare": "husky"
   },
   "devDependencies": {
