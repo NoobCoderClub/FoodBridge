@@ -24,7 +24,9 @@ export function LoginForm() {
       return;
     }
     login.mutate(parsed.data, {
-      onSuccess: () => router.push('/listings'),
+      onSuccess: (data) => {
+        router.push(data.user.role === 'poster' ? '/listings/new' : '/listings');
+      },
       onError: (err) => setError(err.message),
     });
   }

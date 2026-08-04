@@ -27,7 +27,9 @@ export function RegisterForm() {
       return;
     }
     register.mutate(parsed.data, {
-      onSuccess: () => router.push('/login'),
+      onSuccess: (data) => {
+        router.push(data.user.role === 'poster' ? '/listings/new' : '/listings');
+      },
       onError: (err) => setError(err.message),
     });
   }
