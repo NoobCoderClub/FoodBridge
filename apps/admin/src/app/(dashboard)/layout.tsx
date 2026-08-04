@@ -3,11 +3,14 @@
 import { useRouter } from 'next/navigation';
 import { useEffect } from 'react';
 import Link from 'next/link';
+import { Button } from '@/components/ui/button';
 import { useCurrentUser } from '@/features/auth/hooks/use-current-user';
+import { useLogout } from '@/features/auth/hooks/use-logout';
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const { data: user, isLoading } = useCurrentUser();
+  const logout = useLogout();
 
   useEffect(() => {
     if (!isLoading && !user) router.replace('/login');
@@ -31,6 +34,15 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         <Link href="/disputes" className="text-sm">
           Disputes
         </Link>
+        <Button
+          variant="ghost"
+          size="sm"
+          className="ml-auto"
+          onClick={() => logout.mutate()}
+          disabled={logout.isPending}
+        >
+          Log out
+        </Button>
       </nav>
       <main className="flex-1 p-6">{children}</main>
     </div>
