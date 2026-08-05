@@ -1,7 +1,11 @@
 import { Injectable } from '@nestjs/common';
 import { DatabaseService } from '../../database/database.service';
 import type { CreateListingDto } from './dto/create-listing.dto';
-import type { Listing, ListingDetail } from './interfaces/listing.interface';
+import type {
+  Listing,
+  ListingDetail,
+  MyListing,
+} from './interfaces/listing.interface';
 
 @Injectable()
 export class ListingsRepository {
@@ -12,6 +16,10 @@ export class ListingsRepository {
       lat ?? null,
       lng ?? null,
     ]);
+  }
+
+  listMine(posterId: string): Promise<MyListing[]> {
+    return this.db.callFunction<MyListing>('fn_list_my_listings', [posterId]);
   }
 
   async getById(

@@ -1,7 +1,11 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { ListingsRepository } from './listings.repository';
 import type { CreateListingDto } from './dto/create-listing.dto';
-import type { Listing, ListingDetail } from './interfaces/listing.interface';
+import type {
+  Listing,
+  ListingDetail,
+  MyListing,
+} from './interfaces/listing.interface';
 
 @Injectable()
 export class ListingsService {
@@ -9,6 +13,10 @@ export class ListingsService {
 
   browse(lat?: number, lng?: number): Promise<Listing[]> {
     return this.listingsRepository.browse(lat, lng);
+  }
+
+  listMine(posterId: string): Promise<MyListing[]> {
+    return this.listingsRepository.listMine(posterId);
   }
 
   async getById(id: string, requesterId: string): Promise<ListingDetail> {
