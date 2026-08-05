@@ -59,6 +59,8 @@ function Button({
   loading = false,
   disabled,
   children,
+  render,
+  nativeButton = render ? false : true,
   ...props
 }: ButtonProps) {
   return (
@@ -66,6 +68,8 @@ function Button({
       data-slot="button"
       data-loading={loading || undefined}
       disabled={disabled || loading}
+      render={render}
+      nativeButton={nativeButton}
       className={cn(buttonVariants({ variant, size, block, className }))}
       {...props}
     >
