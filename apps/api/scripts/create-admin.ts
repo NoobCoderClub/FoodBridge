@@ -16,6 +16,13 @@ async function main() {
     console.error('Usage: bun run create-admin <email> <password> "<name>"');
     process.exit(1);
   }
+  if (!email.includes('@')) {
+    console.error(
+      `Error: Invalid email address "${email}". The first argument must be the email address.`,
+    );
+    console.error('Usage: bun run create-admin <email> <password> "<name>"');
+    process.exit(1);
+  }
   if (password.length < 8) {
     console.error('Password must be at least 8 characters.');
     process.exit(1);
