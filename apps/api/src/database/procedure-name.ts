@@ -10,6 +10,7 @@ export type ProcedureName =
   | 'sp_reject_account'
   | 'sp_suspend_account'
   | 'fn_browse_listings'
+  | 'fn_list_my_listings'
   | 'fn_get_listing_by_id'
   | 'sp_create_listing'
   | 'sp_claim_listing'

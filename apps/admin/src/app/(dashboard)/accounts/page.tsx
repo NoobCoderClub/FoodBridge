@@ -1,9 +1,16 @@
+import type { Metadata } from 'next';
+import { PageHeader } from '@repo/ui/page-header';
 import { AccountList } from '@/features/accounts/components/account-list';
+
+export const metadata: Metadata = { title: 'Accounts' };
 
 export default function AccountsPage() {
   return (
-    <div className="flex flex-col gap-4">
-      <h1 className="text-2xl font-semibold">Pending accounts</h1>
+    <div className="space-y-8">
+      <PageHeader
+        title="Accounts"
+        description="Approve the posters and takers who should be on the platform, and suspend the ones who shouldn’t."
+      />
       <AccountList />
     </div>
   );

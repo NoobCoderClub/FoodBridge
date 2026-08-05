@@ -1,17 +1,27 @@
+import type { Metadata } from 'next';
 import Link from 'next/link';
 import { RegisterForm } from '@/features/auth/components/register-form';
 
+export const metadata: Metadata = { title: 'Sign up' };
+
 export default function SignupPage() {
   return (
-    <main className="mx-auto flex min-h-screen max-w-sm flex-col justify-center gap-6 px-4">
-      <h1 className="text-2xl font-semibold">Join FoodBridge</h1>
+    <div className="space-y-8 py-4">
+      <div className="space-y-2">
+        <h1 className="text-2xl font-semibold">Join FoodBridge</h1>
+        <p className="text-sm text-muted-foreground">
+          Bridge the gap between surplus food and the people who need it.
+        </p>
+      </div>
+
       <RegisterForm />
-      <p className="text-sm text-gray-600">
+
+      <p className="text-sm text-muted-foreground">
         Already have an account?{' '}
-        <Link href="/login" className="font-medium underline">
+        <Link href="/login" className="font-medium text-primary hover:underline">
           Log in
         </Link>
       </p>
-    </main>
+    </div>
   );
 }

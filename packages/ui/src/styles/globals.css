@@ -1,0 +1,282 @@
+@import 'tailwindcss';
+@import 'tw-animate-css';
+@import 'shadcn/tailwind.css';
+
+/*
+ * FoodBridge design system — "Warm & Human".
+ *
+ * Fresh-produce green as the primary, warm amber as the highlight, and a warm
+ * off-white ground rather than pure white. Every surface carries a little
+ * chroma so the product never reads as clinical greyscale.
+ *
+ * This file is the single source of truth for both apps. Each app's
+ * src/app/globals.css imports it and adds an @source pointing back at this
+ * package so Tailwind can see the classnames used in packages/ui.
+ */
+
+@custom-variant dark (&:is(.dark *));
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+  --font-heading: var(--font-geist-sans);
+
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+
+  /* Brand highlight — warm amber. Kept separate from --accent, which shadcn
+     and Base UI components use as a *subtle hover* surface. Overloading
+     --accent with a vivid colour would turn every ghost hover amber. */
+  --color-highlight: var(--highlight);
+  --color-highlight-foreground: var(--highlight-foreground);
+  --color-highlight-muted: var(--highlight-muted);
+
+  /* Status — drives <StatusBadge> across listing, claim and account states. */
+  --color-status-success: var(--status-success);
+  --color-status-success-foreground: var(--status-success-foreground);
+  --color-status-pending: var(--status-pending);
+  --color-status-pending-foreground: var(--status-pending-foreground);
+  --color-status-danger: var(--status-danger);
+  --color-status-danger-foreground: var(--status-danger-foreground);
+  --color-status-neutral: var(--status-neutral);
+  --color-status-neutral-foreground: var(--status-neutral-foreground);
+
+  /* Urgency — time-to-expiry, the core tension of the product. */
+  --color-urgency-safe: var(--urgency-safe);
+  --color-urgency-soon: var(--urgency-soon);
+  --color-urgency-critical: var(--urgency-critical);
+
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
+
+  --radius-sm: calc(var(--radius) * 0.6);
+  --radius-md: calc(var(--radius) * 0.8);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) * 1.4);
+  --radius-2xl: calc(var(--radius) * 1.8);
+  --radius-3xl: calc(var(--radius) * 2.2);
+  --radius-4xl: calc(var(--radius) * 2.6);
+
+  --shadow-soft:
+    0 1px 2px -1px oklch(0.22 0.02 150 / 0.08), 0 2px 8px -2px oklch(0.22 0.02 150 / 0.08);
+  --shadow-lift:
+    0 2px 4px -2px oklch(0.22 0.02 150 / 0.1), 0 8px 24px -6px oklch(0.22 0.02 150 / 0.12);
+
+  --text-display: 3.5rem;
+  --text-display--line-height: 1.05;
+  --text-display--letter-spacing: -0.03em;
+  --text-display--font-weight: 700;
+}
+
+:root {
+  --radius: 0.75rem;
+
+  --background: oklch(0.99 0.005 90);
+  --foreground: oklch(0.22 0.02 150);
+
+  --card: oklch(1 0.002 90);
+  --card-foreground: oklch(0.22 0.02 150);
+  --popover: oklch(1 0.002 90);
+  --popover-foreground: oklch(0.22 0.02 150);
+
+  --primary: oklch(0.52 0.13 155);
+  --primary-foreground: oklch(0.99 0.01 150);
+
+  --secondary: oklch(0.96 0.012 100);
+  --secondary-foreground: oklch(0.3 0.03 150);
+
+  --muted: oklch(0.96 0.008 90);
+  --muted-foreground: oklch(0.52 0.015 90);
+
+  /* Subtle hover surface, deliberately low-chroma. */
+  --accent: oklch(0.95 0.02 120);
+  --accent-foreground: oklch(0.3 0.04 150);
+
+  --highlight: oklch(0.75 0.15 75);
+  --highlight-foreground: oklch(0.28 0.06 60);
+  --highlight-muted: oklch(0.95 0.05 85);
+
+  --destructive: oklch(0.55 0.2 27);
+  --destructive-foreground: oklch(0.99 0.01 90);
+
+  --border: oklch(0.91 0.008 90);
+  --input: oklch(0.91 0.008 90);
+  --ring: oklch(0.52 0.13 155);
+
+  --status-success: oklch(0.94 0.04 155);
+  --status-success-foreground: oklch(0.38 0.1 155);
+  --status-pending: oklch(0.95 0.05 85);
+  --status-pending-foreground: oklch(0.45 0.11 65);
+  --status-danger: oklch(0.95 0.03 25);
+  --status-danger-foreground: oklch(0.47 0.16 27);
+  --status-neutral: oklch(0.95 0.005 90);
+  --status-neutral-foreground: oklch(0.45 0.012 90);
+
+  --urgency-safe: oklch(0.55 0.13 155);
+  --urgency-soon: oklch(0.7 0.15 70);
+  --urgency-critical: oklch(0.55 0.2 27);
+
+  /* Categorical series, fixed order — never cycled, never reassigned by rank.
+     Verified with the dataviz validator against a white chart surface: all five
+     sit inside the light-mode L band, clear the chroma floor, and hold CVD
+     separation on every adjacent pair. Slots 2 and 5 fall under 3:1 contrast, so
+     charts using them must carry visible labels (they do). */
+  --chart-1: oklch(0.5 0.14 155); /* green — brand */
+  --chart-2: oklch(0.74 0.15 80); /* amber */
+  --chart-3: oklch(0.47 0.16 330); /* plum */
+  --chart-4: oklch(0.55 0.16 35); /* clay */
+  --chart-5: oklch(0.7 0.12 205); /* teal */
+
+  --sidebar: oklch(0.97 0.01 110);
+  --sidebar-foreground: oklch(0.28 0.02 150);
+  --sidebar-primary: oklch(0.52 0.13 155);
+  --sidebar-primary-foreground: oklch(0.99 0.01 150);
+  --sidebar-accent: oklch(0.93 0.025 130);
+  --sidebar-accent-foreground: oklch(0.3 0.05 155);
+  --sidebar-border: oklch(0.9 0.012 100);
+  --sidebar-ring: oklch(0.52 0.13 155);
+}
+
+.dark {
+  --background: oklch(0.18 0.015 150);
+  --foreground: oklch(0.96 0.008 90);
+
+  --card: oklch(0.22 0.018 150);
+  --card-foreground: oklch(0.96 0.008 90);
+  --popover: oklch(0.24 0.018 150);
+  --popover-foreground: oklch(0.96 0.008 90);
+
+  --primary: oklch(0.72 0.14 155);
+  --primary-foreground: oklch(0.18 0.03 155);
+
+  --secondary: oklch(0.28 0.02 150);
+  --secondary-foreground: oklch(0.94 0.01 90);
+
+  --muted: oklch(0.27 0.018 150);
+  --muted-foreground: oklch(0.72 0.015 90);
+
+  --accent: oklch(0.3 0.03 150);
+  --accent-foreground: oklch(0.95 0.015 120);
+
+  --highlight: oklch(0.8 0.14 78);
+  --highlight-foreground: oklch(0.2 0.04 60);
+  --highlight-muted: oklch(0.32 0.06 70);
+
+  --destructive: oklch(0.7 0.19 25);
+  --destructive-foreground: oklch(0.16 0.03 25);
+
+  --border: oklch(0.98 0.01 90 / 12%);
+  --input: oklch(0.98 0.01 90 / 16%);
+  --ring: oklch(0.72 0.14 155);
+
+  --status-success: oklch(0.35 0.07 155);
+  --status-success-foreground: oklch(0.88 0.11 155);
+  --status-pending: oklch(0.36 0.07 75);
+  --status-pending-foreground: oklch(0.89 0.12 85);
+  --status-danger: oklch(0.35 0.09 25);
+  --status-danger-foreground: oklch(0.85 0.11 25);
+  --status-neutral: oklch(0.3 0.012 150);
+  --status-neutral-foreground: oklch(0.82 0.01 90);
+
+  --urgency-safe: oklch(0.72 0.14 155);
+  --urgency-soon: oklch(0.8 0.14 78);
+  --urgency-critical: oklch(0.7 0.19 25);
+
+  /* Dark mode is re-stepped, not flipped: its own L band (0.48–0.67) validated
+     against the dark card surface. Same hue per slot so a series keeps its
+     identity across themes. */
+  --chart-1: oklch(0.63 0.14 155);
+  --chart-2: oklch(0.5 0.13 80);
+  --chart-3: oklch(0.66 0.16 330);
+  --chart-4: oklch(0.64 0.15 35);
+  --chart-5: oklch(0.53 0.15 210);
+
+  --sidebar: oklch(0.21 0.018 150);
+  --sidebar-foreground: oklch(0.94 0.008 90);
+  --sidebar-primary: oklch(0.72 0.14 155);
+  --sidebar-primary-foreground: oklch(0.18 0.03 155);
+  --sidebar-accent: oklch(0.29 0.03 152);
+  --sidebar-accent-foreground: oklch(0.95 0.015 120);
+  --sidebar-border: oklch(0.98 0.01 90 / 12%);
+  --sidebar-ring: oklch(0.72 0.14 155);
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+
+  html {
+    @apply font-sans;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  body {
+    @apply bg-background text-foreground;
+    font-feature-settings: 'cv11', 'ss01';
+  }
+
+  /* Headings get real display treatment rather than inheriting body metrics. */
+  h1,
+  h2,
+  h3 {
+    @apply font-heading tracking-tight;
+    text-wrap: balance;
+  }
+
+  /* Numerals in stats, countdowns and quantities must not jitter as they tick. */
+  .tabular {
+    font-variant-numeric: tabular-nums;
+  }
+}
+
+@layer utilities {
+  .shadow-soft {
+    box-shadow: var(--shadow-soft);
+  }
+
+  .shadow-lift {
+    box-shadow: var(--shadow-lift);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}

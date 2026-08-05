@@ -1,3 +1,7 @@
+import { CheckCircle2, Scale, UtensilsCrossed } from 'lucide-react';
+import { StatCard } from '@repo/ui/stat-card';
+import { formatNumber } from '@repo/ui/lib/format';
+
 export function StatsCards({
   totalKgRescued,
   totalServingsRescued,
@@ -7,20 +11,28 @@ export function StatsCards({
   totalServingsRescued: number;
   totalCompletedClaims: number;
 }) {
-  const cards = [
-    { label: 'Total kg rescued', value: totalKgRescued },
-    { label: 'Total servings rescued', value: totalServingsRescued },
-    { label: 'Completed pickups', value: totalCompletedClaims },
-  ];
-
   return (
-    <div className="grid grid-cols-3 gap-4">
-      {cards.map((card) => (
-        <div key={card.label} className="rounded-md border border-gray-300 p-4">
-          <p className="text-sm text-gray-500">{card.label}</p>
-          <p className="text-2xl font-semibold">{card.value}</p>
-        </div>
-      ))}
+    <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+      <StatCard
+        label="Food rescued"
+        value={formatNumber(totalKgRescued)}
+        unit="kg"
+        icon={<Scale aria-hidden="true" />}
+        hint="Total weight collected instead of wasted"
+      />
+      <StatCard
+        label="Servings rescued"
+        value={formatNumber(totalServingsRescued)}
+        unit="servings"
+        icon={<UtensilsCrossed aria-hidden="true" />}
+        hint="Meals redistributed to takers"
+      />
+      <StatCard
+        label="Completed pickups"
+        value={formatNumber(totalCompletedClaims)}
+        icon={<CheckCircle2 aria-hidden="true" />}
+        hint="Claims that ended in a successful handover"
+      />
     </div>
   );
 }

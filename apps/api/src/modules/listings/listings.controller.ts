@@ -40,6 +40,15 @@ export class ListingsController {
     return this.listingsService.browse(query.lat, query.lng);
   }
 
+  // Declared before `:id` — Nest matches routes in declaration order, so the
+  // literal path must win over the parameterised one.
+  @Get('mine')
+  @UseGuards(RolesGuard)
+  @Roles('poster')
+  listMine(@Req() req: AuthenticatedRequest) {
+    return this.listingsService.listMine(req.user.id);
+  }
+
   @Get(':id')
   getById(@Req() req: AuthenticatedRequest, @Param('id') id: string) {
     return this.listingsService.getById(id, req.user.id);
