@@ -14,6 +14,11 @@ export interface Listing {
   distance_km?: number | null;
 }
 
+/** A poster's own listing — every status, plus the live claim if there is one. */
+export interface MyListing extends Omit<Listing, 'distance_km'> {
+  active_claim_id: string | null;
+}
+
 export interface ListingDetail {
   id: string;
   poster_id: string;

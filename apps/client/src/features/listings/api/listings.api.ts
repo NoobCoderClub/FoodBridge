@@ -1,6 +1,10 @@
 import { apiFetch } from '@/lib/api-client';
 import type { CreateListingInput } from '../schema/listing.schema';
-import type { Listing, ListingDetail } from '../types';
+import type { Listing, ListingDetail, MyListing } from '../types';
+
+export function listMyListings() {
+  return apiFetch<MyListing[]>('/listings/mine');
+}
 
 export function browseListings(lat?: number, lng?: number) {
   const params = new URLSearchParams();
