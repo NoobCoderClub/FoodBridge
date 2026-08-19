@@ -16,6 +16,12 @@ import { useCreateListing } from '../hooks/use-create-listing';
 import { createListingSchema } from '../schema/listing.schema';
 import { zodFieldErrors } from '@/lib/form';
 
+/**
+ * Above this radius the fix is a network-derived guess rather than a GPS
+ * reading, and is too rough to send a taker to a door.
+ */
+const COARSE_FIX_METRES = 50;
+
 /** Default window: prepared now, collectable for the next three hours. */
 function defaultTimes() {
   const now = new Date();
@@ -57,7 +63,10 @@ function Section({
 export function ListingForm() {
   const router = useRouter();
   const createListing = useCreateListing();
-  const geo = useGeolocation({ immediate: false });
+  // High accuracy engages the GPS chip. Without it the browser answers from
+  // WiFi/cell/IP triangulation, which puts the pickup point anywhere within a
+  // few hundred metres to several kilometres of where the food actually is.
+  const geo = useGeolocation({ immediate: false, enableHighAccuracy: true });
 
   const [form, setForm] = useState({
     foodType: '',
@@ -69,6 +78,8 @@ export function ListingForm() {
     addressExact: '',
     ...defaultTimes(),
   });
+  // Kept out of `form` because it is shown to the poster, never submitted.
+  const [accuracy, setAccuracy] = useState<number | null>(null);
   const [imageKeys, setImageKeys] = useState<string[]>([]);
   const [uploading, setUploading] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -81,9 +92,17 @@ export function ListingForm() {
   // Folded in from the geolocation callback rather than an effect watching geo
   // state, so the coordinates are written exactly once per request.
   function useMyLocation() {
-    geo.request(({ lat, lng }) =>
-      setForm((prev) => ({ ...prev, latitude: lat.toFixed(6), longitude: lng.toFixed(6) })),
-    );
+    geo.request(({ lat, lng, accuracy: fixAccuracy }) => {
+      setForm((prev) => ({ ...prev, latitude: lat.toFixed(6), longitude: lng.toFixed(6) }));
+      setAccuracy(fixAccuracy);
+    });
+  }
+
+  // A typed-in coordinate is nobody's GPS reading, so the accuracy figure that
+  // came with the last fix no longer describes it.
+  function updateCoordinate(field: 'latitude' | 'longitude', value: string) {
+    update(field, value);
+    setAccuracy(null);
   }
 
   const hasCoords = form.latitude !== '' && form.longitude !== '';
@@ -189,16 +208,43 @@ export function ListingForm() {
             </Button>
             {hasCoords ? (
               <span className="tabular text-xs text-muted-foreground">
-                {Number(form.latitude).toFixed(4)}, {Number(form.longitude).toFixed(4)}
+                {Number(form.latitude).toFixed(6)}, {Number(form.longitude).toFixed(6)}
+                {accuracy != null ? ` · accurate to ±${Math.round(accuracy)} m` : null}
               </span>
             ) : null}
           </div>
 
-          {geo.denied ? (
+          {geo.loading ? (
             <p className="text-xs text-muted-foreground">
-              Location unavailable. Enter the coordinates manually below — takers need them to sort
-              listings by distance.
+              Getting a precise fix — this can take a few seconds. Stay put until it lands.
             </p>
+          ) : null}
+
+          {accuracy != null && accuracy > COARSE_FIX_METRES ? (
+            <p className="text-xs text-muted-foreground">
+              This fix is only accurate to about {Math.round(accuracy)} m. If the pickup point needs
+              to be exact, step outside or near a window and press “Update location” again.
+            </p>
+          ) : null}
+
+          {geo.failure === 'denied' ? (
+            <p className="text-xs text-muted-foreground">
+              Location is blocked for this site. Allow it in your browser’s site settings and press
+              the button again, or enter the coordinates manually below.
+            </p>
+          ) : null}
+
+          {geo.failure === 'unavailable' ? (
+            <p className="text-xs text-muted-foreground">
+              Couldn’t get a location fix — the signal may be weak indoors. Try again, or enter the
+              coordinates manually below.
+            </p>
+          ) : null}
+
+          {/* The manual inputs below only appear once a fix lands or fails, so
+              until then a coordinate error has no field to render under. */}
+          {errors.latitude && !geo.denied && !hasCoords ? (
+            <p className="text-sm text-destructive">{errors.latitude}</p>
           ) : null}
 
           {geo.denied || hasCoords ? (
@@ -209,7 +255,7 @@ export function ListingForm() {
                   step="any"
                   inputMode="decimal"
                   value={form.latitude}
-                  onChange={(e) => update('latitude', e.target.value)}
+                  onChange={(e) => updateCoordinate('latitude', e.target.value)}
                 />
               </FormField>
               <FormField name="longitude" label="Longitude">
@@ -218,7 +264,7 @@ export function ListingForm() {
                   step="any"
                   inputMode="decimal"
                   value={form.longitude}
-                  onChange={(e) => update('longitude', e.target.value)}
+                  onChange={(e) => updateCoordinate('longitude', e.target.value)}
                 />
               </FormField>
             </div>

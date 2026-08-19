@@ -54,7 +54,19 @@ export function telHref(phone: string): string {
   return `tel:${phone.replace(/[^\d+]/g, '')}`;
 }
 
-/** Opens the platform's maps app at the given address. */
-export function mapsHref(address: string): string {
-  return `https://maps.google.com/?q=${encodeURIComponent(address)}`;
+/**
+ * Opens the platform's maps app at the pickup point.
+ *
+ * Coordinates win when we have them: the address is free text a poster typed,
+ * so searching for it lands on a street, the wrong house, or nothing at all,
+ * whereas the poster's GPS fix is the actual door. The address form stays as
+ * the fallback for callers that hold no coordinates.
+ */
+export function mapsHref(
+  address: string,
+  coords?: { latitude?: number | null; longitude?: number | null },
+): string {
+  const { latitude, longitude } = coords ?? {};
+  const query = latitude != null && longitude != null ? `${latitude},${longitude}` : address;
+  return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(query)}`;
 }

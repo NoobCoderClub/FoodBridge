@@ -1,11 +1,24 @@
 import { z } from 'zod';
 
+/**
+ * The form holds coordinates as strings, and `z.coerce.number()` turns `''`
+ * into `0` — which sits inside every latitude/longitude bound, so an untouched
+ * form used to post a listing at (0, 0) in the Gulf of Guinea. Rejecting the
+ * empty string before coercion is what makes the location genuinely required.
+ */
+const coordinate = (limit: number) =>
+  z
+    .string()
+    .min(1, 'Set your location before posting.')
+    .transform(Number)
+    .pipe(z.number().min(-limit).max(limit));
+
 export const createListingSchema = z.object({
   foodType: z.string().min(1),
   quantity: z.coerce.number().positive(),
   quantityUnit: z.enum(['kg', 'servings']),
-  latitude: z.coerce.number().min(-90).max(90),
-  longitude: z.coerce.number().min(-180).max(180),
+  latitude: coordinate(90),
+  longitude: coordinate(180),
   addressApprox: z.string().min(1),
   addressExact: z.string().min(1),
   preparedAt: z.string().min(1),

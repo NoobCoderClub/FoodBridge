@@ -12,10 +12,15 @@ export function ContactCard({
   addressExact,
   posterPhone,
   pickupDeadline,
+  latitude,
+  longitude,
 }: {
   addressExact: string;
   posterPhone: string | null;
   pickupDeadline: string;
+  /** The poster's GPS fix, revealed alongside the exact address. */
+  latitude?: number | null;
+  longitude?: number | null;
 }) {
   return (
     <div className="overflow-hidden rounded-xl border border-primary/25 bg-primary/5">
@@ -53,7 +58,13 @@ export function ContactCard({
           <Button
             variant="outline"
             block
-            render={<a href={mapsHref(addressExact)} target="_blank" rel="noopener noreferrer" />}
+            render={
+              <a
+                href={mapsHref(addressExact, { latitude, longitude })}
+                target="_blank"
+                rel="noopener noreferrer"
+              />
+            }
           >
             <Navigation aria-hidden="true" />
             Directions
