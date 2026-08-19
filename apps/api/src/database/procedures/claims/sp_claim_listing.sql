@@ -5,6 +5,10 @@
 --
 -- The partial unique index on claims(listing_id) WHERE status='active' remains
 -- the backstop; its 23505 is mapped to a 409 by the global exception filter.
+--
+-- Self-claims are rejected outright. One profile both posts and claims, and
+-- sp_complete_claim credits reputation to *both* parties, so claiming your own
+-- listing would mint two completions for food that never moved.
 create or replace function sp_claim_listing(p_listing_id uuid, p_taker_id uuid)
 returns table (
   id uuid,
@@ -17,6 +21,13 @@ returns table (
 language plpgsql
 as $$
 begin
+  if exists (
+    select 1 from listings
+    where listings.id = p_listing_id and listings.poster_id = p_taker_id
+  ) then
+    raise exception 'You cannot claim your own listing' using errcode = 'P0001';
+  end if;
+
   return query
     with claimed as (
       update listings

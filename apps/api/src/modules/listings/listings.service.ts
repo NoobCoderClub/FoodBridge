@@ -11,8 +11,8 @@ import type {
 export class ListingsService {
   constructor(private readonly listingsRepository: ListingsRepository) {}
 
-  browse(lat?: number, lng?: number): Promise<Listing[]> {
-    return this.listingsRepository.browse(lat, lng);
+  browse(viewerId: string, lat?: number, lng?: number): Promise<Listing[]> {
+    return this.listingsRepository.browse(viewerId, lat, lng);
   }
 
   listMine(posterId: string): Promise<MyListing[]> {

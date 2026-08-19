@@ -12,13 +12,13 @@ export class ClaimsController {
   constructor(private readonly claimsService: ClaimsService) {}
 
   @Get('mine')
-  @Roles('taker')
+  @Roles('member')
   listMine(@Req() req: AuthenticatedRequest) {
     return this.claimsService.listMine(req.user.id);
   }
 
   @Patch(':id/complete')
-  @Roles('poster', 'taker')
+  @Roles('member')
   complete(@Param('id') id: string, @Req() req: AuthenticatedRequest) {
     return this.claimsService.complete(id, req.user.id);
   }

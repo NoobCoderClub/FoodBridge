@@ -7,27 +7,25 @@ import { LogOut, Menu, PlusCircle, Search, Sprout, Ticket, X } from 'lucide-reac
 import { Button } from '@repo/ui/button';
 import { ThemeToggle } from '@repo/ui/theme-toggle';
 import { cn } from '@repo/ui/lib/utils';
-import type { UserRole } from '@repo/types';
 
 type NavLink = { href: string; label: string; icon: React.ComponentType<{ className?: string }> };
 
-const POSTER_LINKS: NavLink[] = [
-  { href: '/my-listings', label: 'My listings', icon: Sprout },
-  { href: '/listings/new', label: 'Post a listing', icon: PlusCircle },
-];
-
-const TAKER_LINKS: NavLink[] = [
+// One profile does both, so every member gets every link — giving on the left,
+// taking on the right, in the order a session tends to go.
+const LINKS: NavLink[] = [
   { href: '/listings', label: 'Browse', icon: Search },
+  { href: '/listings/new', label: 'Post a listing', icon: PlusCircle },
+  { href: '/my-listings', label: 'My listings', icon: Sprout },
   { href: '/my-claims', label: 'My claims', icon: Ticket },
 ];
 
+const HOME = '/listings';
+
 export function AppNav({
-  role,
   userName,
   onLogout,
   loggingOut,
 }: {
-  role: UserRole;
   userName: string;
   onLogout: () => void;
   loggingOut: boolean;
@@ -35,11 +33,15 @@ export function AppNav({
   const pathname = usePathname();
   const [menuOpen, setMenuOpen] = useState(false);
 
-  const links = role === 'poster' ? POSTER_LINKS : TAKER_LINKS;
-  const home = role === 'poster' ? '/my-listings' : '/listings';
+  // `/listings` prefix-matches `/listings/new` and both are links now, so
+  // resolve the single longest match rather than highlighting both. A listing
+  // detail page (`/listings/<id>`) still falls through to Browse.
+  const activeHref = LINKS.map((link) => link.href)
+    .filter((href) => pathname === href || pathname.startsWith(`${href}/`))
+    .sort((a, b) => b.length - a.length)[0];
 
   function isActive(href: string) {
-    return pathname === href || pathname.startsWith(`${href}/`);
+    return href === activeHref;
   }
 
   return (
@@ -49,7 +51,7 @@ export function AppNav({
         className="mx-auto flex h-16 w-full max-w-5xl items-center gap-2 px-4 sm:px-6"
       >
         <Link
-          href={home}
+          href={HOME}
           className="flex shrink-0 items-center gap-2 rounded-lg font-semibold tracking-tight focus-visible:ring-3 focus-visible:ring-ring/40 focus-visible:outline-none"
         >
           <span className="flex size-8 items-center justify-center rounded-lg bg-primary text-primary-foreground">
@@ -58,8 +60,10 @@ export function AppNav({
           FoodBridge
         </Link>
 
-        <div className="hidden items-center gap-1 sm:ml-4 sm:flex">
-          {links.map((link) => (
+        {/* Four links no longer fit beside the logo at `sm`, so the desktop row
+            and the mobile menu swap over at `lg` instead. */}
+        <div className="hidden items-center gap-1 lg:ml-4 lg:flex">
+          {LINKS.map((link) => (
             <Link
               key={link.href}
               href={link.href}
@@ -86,7 +90,7 @@ export function AppNav({
           <Button
             variant="ghost"
             size="sm"
-            className="hidden sm:inline-flex"
+            className="hidden lg:inline-flex"
             onClick={onLogout}
             loading={loggingOut}
           >
@@ -96,7 +100,7 @@ export function AppNav({
           <Button
             variant="ghost"
             size="icon-sm"
-            className="sm:hidden"
+            className="lg:hidden"
             aria-expanded={menuOpen}
             aria-controls="mobile-menu"
             aria-label={menuOpen ? 'Close menu' : 'Open menu'}
@@ -108,9 +112,9 @@ export function AppNav({
       </nav>
 
       {menuOpen ? (
-        <div id="mobile-menu" className="border-t border-border bg-background sm:hidden">
+        <div id="mobile-menu" className="border-t border-border bg-background lg:hidden">
           <div className="flex flex-col gap-1 p-3">
-            {links.map((link) => (
+            {LINKS.map((link) => (
               <Link
                 key={link.href}
                 href={link.href}

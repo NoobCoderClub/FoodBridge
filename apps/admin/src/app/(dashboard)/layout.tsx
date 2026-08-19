@@ -12,9 +12,14 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const { data: user, isLoading } = useCurrentUser();
   const logout = useLogout();
 
+  // A signed-in member is not an admin. Without the role check the whole shell
+  // renders for them and only the API's @Roles('admin') stops the data, leaving
+  // a back-office full of 403s instead of a redirect.
+  const isAdmin = user?.role === 'admin';
+
   useEffect(() => {
-    if (!isLoading && !user) router.replace('/login');
-  }, [isLoading, user, router]);
+    if (!isLoading && !isAdmin) router.replace('/login');
+  }, [isLoading, isAdmin, router]);
 
   if (isLoading) {
     return (
@@ -27,7 +32,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     );
   }
 
-  if (!user) return null;
+  if (!user || !isAdmin) return null;
 
   return (
     <AdminSidebar

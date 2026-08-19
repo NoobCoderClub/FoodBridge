@@ -44,8 +44,8 @@ export const auth = betterAuth({
     additionalFields: {
       role: {
         type: 'string',
-        defaultValue: 'taker',
-        input: true,
+        defaultValue: 'member',
+        input: false,
       },
       status: {
         type: 'string',
@@ -65,17 +65,16 @@ export const auth = betterAuth({
   databaseHooks: {
     user: {
       create: {
-        before: (user) => {
-          const requestedRole = (user as { role?: unknown }).role;
-          const role = requestedRole === 'poster' ? 'poster' : 'taker';
-          return Promise.resolve({
+        // Signup can only ever mint a pending `member`. `admin` is unreachable
+        // through the API by design — scripts/create-admin.ts promotes in SQL.
+        before: (user) =>
+          Promise.resolve({
             data: {
               ...user,
-              role,
+              role: 'member',
               status: 'pending',
             },
-          });
-        },
+          }),
       },
     },
   },

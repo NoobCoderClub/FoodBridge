@@ -1,7 +1,15 @@
 -- Available listings, nearest first. With no caller coordinates every
 -- distance is null, so the sort falls through to `expires_at` on its own —
 -- no separate no-location branch needed.
-create or replace function fn_browse_listings(p_lat double precision, p_lng double precision)
+--
+-- The viewer's own listings are excluded: one profile both posts and claims, so
+-- without this your own surplus would sit in the feed you use to find food.
+-- `is distinct from` rather than `<>` so a null viewer id still returns everything.
+create or replace function fn_browse_listings(
+  p_lat double precision,
+  p_lng double precision,
+  p_viewer_id uuid
+)
 returns table (
   id uuid,
   poster_id uuid,
@@ -32,5 +40,6 @@ as $$
     fn_distance_km(p_lat, p_lng, l.latitude, l.longitude) as distance_km
   from listings l
   where l.status = 'available'
+    and l.poster_id is distinct from p_viewer_id
   order by distance_km asc nulls last, l.expires_at asc;
 $$;

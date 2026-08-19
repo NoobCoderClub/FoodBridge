@@ -32,9 +32,7 @@ export function LoginForm() {
     setErrors({});
 
     login.mutate(parsed.data, {
-      onSuccess: (data) => {
-        router.push(data.user.role === 'poster' ? '/my-listings' : '/listings');
-      },
+      onSuccess: () => router.push('/listings'),
       onError: (err) => setFormError(err.message),
     });
   }
