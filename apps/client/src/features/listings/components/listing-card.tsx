@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { MapPin, UtensilsCrossed } from 'lucide-react';
+import { MapPin } from 'lucide-react';
 import { Badge } from '@repo/ui/badge';
 import { cardVariants } from '@repo/ui/card';
 import { StatusBadge } from '@repo/ui/status-badge';
@@ -7,6 +7,7 @@ import { ExpiryBar } from '@repo/ui/expiry-bar';
 import { TimeRemaining } from '@repo/ui/countdown';
 import { formatDistance, formatQuantity } from '@repo/ui/lib/format';
 import { cn } from '@repo/ui/lib/utils';
+import { ListingThumb } from './listing-thumb';
 import type { Listing } from '../types';
 
 export function ListingCard({ listing }: { listing: Listing }) {
@@ -19,9 +20,7 @@ export function ListingCard({ listing }: { listing: Listing }) {
     >
       <div className="flex items-start justify-between gap-3">
         <div className="flex min-w-0 items-start gap-3">
-          <span className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
-            <UtensilsCrossed className="size-5" aria-hidden="true" />
-          </span>
+          <ListingThumb url={listing.thumbnail_url} />
           <div className="min-w-0">
             <h3 className="truncate font-semibold transition-colors group-hover:text-primary">
               {listing.food_type}

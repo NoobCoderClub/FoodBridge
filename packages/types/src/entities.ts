@@ -31,6 +31,18 @@ export interface Listing {
   createdAt: string;
 }
 
+/**
+ * One photo attached to a listing. `objectKey` addresses the bucket, never the
+ * browser — the API exchanges it for a short-lived signed URL on read.
+ */
+export interface ListingImage {
+  id: string;
+  listingId: string;
+  objectKey: string;
+  position: number;
+  createdAt: string;
+}
+
 export interface Claim {
   id: string;
   listingId: string;

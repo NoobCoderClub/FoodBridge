@@ -20,7 +20,8 @@ returns table (
   status text,
   created_at timestamptz,
   poster_phone text,
-  active_claim_id uuid
+  active_claim_id uuid,
+  image_keys text[]
 )
 language sql
 stable
@@ -57,6 +58,17 @@ as $$
     a.status,
     a.created_at,
     case when a.has_active_claim and not a.is_poster then a.poster_phone end,
-    case when a.is_poster or a.has_active_claim then a.active_claim_id end
+    case when a.is_poster or a.has_active_claim then a.active_claim_id end,
+    -- Deliberately not behind the reveal rules above: the photos are what a
+    -- browsing member judges the listing on before deciding to claim it, unlike
+    -- the exact address and phone number, which only matter once they have.
+    coalesce(
+      (
+        select array_agg(li.object_key order by li.position)
+        from listing_images li
+        where li.listing_id = a.id
+      ),
+      '{}'
+    )
   from access a;
 $$;

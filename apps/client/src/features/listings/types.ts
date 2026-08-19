@@ -12,6 +12,8 @@ export interface Listing {
   status: ListingStatus;
   created_at: string;
   distance_km?: number | null;
+  /** Presigned cover-photo URL, already signed by the API. Expires. */
+  thumbnail_url: string | null;
 }
 
 /** A poster's own listing — every status, plus the live claim if there is one. */
@@ -35,4 +37,6 @@ export interface ListingDetail {
   created_at: string;
   poster_phone: string | null;
   active_claim_id: string | null;
+  /** Presigned gallery URLs in display order; the first is the cover. */
+  image_urls: string[];
 }
