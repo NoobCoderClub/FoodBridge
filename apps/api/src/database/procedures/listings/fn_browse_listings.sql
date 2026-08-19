@@ -21,7 +21,8 @@ returns table (
   expires_at timestamptz,
   status text,
   created_at timestamptz,
-  distance_km double precision
+  distance_km double precision,
+  thumbnail_key text
 )
 language sql
 stable
@@ -37,7 +38,17 @@ as $$
     l.expires_at,
     l.status,
     l.created_at,
-    fn_distance_km(p_lat, p_lng, l.latitude, l.longitude) as distance_km
+    fn_distance_km(p_lat, p_lng, l.latitude, l.longitude) as distance_km,
+    -- Only the cover: a card shows one photo, and each key costs the API a
+    -- presigned URL, so pulling the whole gallery here would be N times the work
+    -- for something the grid never renders.
+    (
+      select li.object_key
+      from listing_images li
+      where li.listing_id = l.id
+      order by li.position
+      limit 1
+    ) as thumbnail_key
   from listings l
   where l.status = 'available'
     and l.poster_id is distinct from p_viewer_id

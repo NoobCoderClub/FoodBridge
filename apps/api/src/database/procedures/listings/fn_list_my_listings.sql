@@ -16,7 +16,8 @@ returns table (
   expires_at timestamptz,
   status text,
   created_at timestamptz,
-  active_claim_id uuid
+  active_claim_id uuid,
+  thumbnail_key text
 )
 language sql
 stable
@@ -37,7 +38,15 @@ as $$
       from claims c
       where c.listing_id = l.id and c.status = 'active'
       limit 1
-    ) as active_claim_id
+    ) as active_claim_id,
+    -- Cover image only, matching `fn_browse_listings` — both feed cards.
+    (
+      select li.object_key
+      from listing_images li
+      where li.listing_id = l.id
+      order by li.position
+      limit 1
+    ) as thumbnail_key
   from listings l
   where l.poster_id = p_poster_id
   order by l.created_at desc;

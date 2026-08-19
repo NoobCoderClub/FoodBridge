@@ -8,6 +8,7 @@ import { AccountsModule } from './modules/accounts/accounts.module';
 import { ListingsModule } from './modules/listings/listings.module';
 import { ClaimsModule } from './modules/claims/claims.module';
 import { StatsModule } from './modules/stats/stats.module';
+import { UploadsModule } from './modules/uploads/uploads.module';
 
 @Module({
   imports: [
@@ -19,6 +20,7 @@ import { StatsModule } from './modules/stats/stats.module';
     ListingsModule,
     ClaimsModule,
     StatsModule,
+    UploadsModule,
   ],
   controllers: [AppController],
   providers: [],

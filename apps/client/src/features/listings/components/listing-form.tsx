@@ -2,7 +2,7 @@
 
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
-import { Clock, Crosshair, MapPin, UtensilsCrossed } from 'lucide-react';
+import { Camera, Clock, Crosshair, MapPin, UtensilsCrossed } from 'lucide-react';
 import { Button } from '@repo/ui/button';
 import { Card } from '@repo/ui/card';
 import { Input } from '@repo/ui/input';
@@ -11,6 +11,7 @@ import { InlineError } from '@repo/ui/error-state';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@repo/ui/select';
 import { toast } from '@repo/ui/toast';
 import { useGeolocation } from '@/hooks/use-geolocation';
+import { ListingImagePicker } from './listing-image-picker';
 import { useCreateListing } from '../hooks/use-create-listing';
 import { createListingSchema } from '../schema/listing.schema';
 import { zodFieldErrors } from '@/lib/form';
@@ -68,6 +69,8 @@ export function ListingForm() {
     addressExact: '',
     ...defaultTimes(),
   });
+  const [imageKeys, setImageKeys] = useState<string[]>([]);
+  const [uploading, setUploading] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [formError, setFormError] = useState<string | null>(null);
 
@@ -91,6 +94,7 @@ export function ListingForm() {
 
     const parsed = createListingSchema.safeParse({
       ...form,
+      imageKeys,
       preparedAt: form.preparedAt ? new Date(form.preparedAt).toISOString() : '',
       expiresAt: form.expiresAt ? new Date(form.expiresAt).toISOString() : '',
     });
@@ -156,6 +160,14 @@ export function ListingForm() {
             </Select>
           </FormField>
         </div>
+      </Section>
+
+      <Section
+        icon={Camera}
+        title="Photos"
+        description="Optional, but a photo is the first thing anyone judges the food on. The first one is the cover."
+      >
+        <ListingImagePicker onChange={setImageKeys} onUploadingChange={setUploading} />
       </Section>
 
       <Section
@@ -263,8 +275,9 @@ export function ListingForm() {
 
       {formError ? <InlineError>{formError}</InlineError> : null}
 
-      <Button type="submit" size="lg" block loading={createListing.isPending}>
-        Post listing
+      {/* Posting mid-upload would drop the photos still in flight. */}
+      <Button type="submit" size="lg" block loading={createListing.isPending} disabled={uploading}>
+        {uploading ? 'Waiting for photos…' : 'Post listing'}
       </Button>
     </Form>
   );

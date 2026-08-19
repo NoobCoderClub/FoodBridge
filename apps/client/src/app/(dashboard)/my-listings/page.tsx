@@ -16,6 +16,7 @@ import { Tabs, TabsList, TabsTrigger } from '@repo/ui/tabs';
 import { TimeRemaining } from '@repo/ui/countdown';
 import { formatDateTime, formatQuantity } from '@repo/ui/lib/format';
 import { cn } from '@repo/ui/lib/utils';
+import { ListingThumb } from '@/features/listings/components/listing-thumb';
 import { useMyListings } from '@/features/listings/hooks/use-my-listings';
 import type { MyListing } from '@/features/listings/types';
 
@@ -39,9 +40,7 @@ function MyListingCard({ listing }: { listing: MyListing }) {
     >
       <div className="flex items-start justify-between gap-3">
         <div className="flex min-w-0 items-start gap-3">
-          <span className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
-            <UtensilsCrossed className="size-5" aria-hidden="true" />
-          </span>
+          <ListingThumb url={listing.thumbnail_url} />
           <div className="min-w-0">
             <h3 className="truncate font-semibold transition-colors group-hover:text-primary">
               {listing.food_type}

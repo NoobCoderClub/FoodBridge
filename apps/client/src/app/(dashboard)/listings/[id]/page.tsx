@@ -13,6 +13,7 @@ import { Skeleton } from '@repo/ui/skeleton';
 import { StatusBadge } from '@repo/ui/status-badge';
 import { TimeRemaining } from '@repo/ui/countdown';
 import { formatDateTime, formatQuantity } from '@repo/ui/lib/format';
+import { ListingGallery } from '@/features/listings/components/listing-gallery';
 import { useListing } from '@/features/listings/hooks/use-listing';
 import { useCurrentUser } from '@/features/auth/hooks/use-current-user';
 import { useMyClaims } from '@/features/claims/hooks/use-my-claims';
@@ -97,12 +98,18 @@ export default function ListingDetailPage({ params }: { params: Promise<{ id: st
         Back
       </Button>
 
+      <ListingGallery urls={listing.image_urls} />
+
       <div className="space-y-4">
         <div className="flex items-start justify-between gap-4">
           <div className="flex min-w-0 items-start gap-3">
-            <span className="flex size-12 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
-              <UtensilsCrossed className="size-6" aria-hidden="true" />
-            </span>
+            {/* The chip is the stand-in when there are no photos — with a hero
+                above, a second icon beside the title is just noise. */}
+            {listing.image_urls.length === 0 ? (
+              <span className="flex size-12 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
+                <UtensilsCrossed className="size-6" aria-hidden="true" />
+              </span>
+            ) : null}
             <div className="min-w-0">
               <h1 className="text-2xl font-semibold break-words">{listing.food_type}</h1>
               <p className="mt-1 text-sm text-muted-foreground">

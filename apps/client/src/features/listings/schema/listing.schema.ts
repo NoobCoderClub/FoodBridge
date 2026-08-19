@@ -10,5 +10,6 @@ export const createListingSchema = z.object({
   addressExact: z.string().min(1),
   preparedAt: z.string().min(1),
   expiresAt: z.string().min(1),
+  imageKeys: z.array(z.string()).max(5).default([]),
 });
 export type CreateListingInput = z.infer<typeof createListingSchema>;

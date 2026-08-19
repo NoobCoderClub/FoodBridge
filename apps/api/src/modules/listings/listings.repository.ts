@@ -34,12 +34,17 @@ export class ListingsRepository {
     return listing;
   }
 
+  /**
+   * `imageKeys` are the promoted (permanent) keys, not the pending ones the
+   * client sent — the service resolves those first.
+   */
   async create(
     posterId: string,
     dto: CreateListingDto,
-  ): Promise<Omit<ListingDetail, 'poster_phone'>> {
+    imageKeys: string[],
+  ): Promise<Omit<ListingDetail, 'poster_phone' | 'active_claim_id'>> {
     const [listing] = await this.db.callFunction<
-      Omit<ListingDetail, 'poster_phone'>
+      Omit<ListingDetail, 'poster_phone' | 'active_claim_id'>
     >('sp_create_listing', [
       posterId,
       dto.foodType,
@@ -51,6 +56,7 @@ export class ListingsRepository {
       dto.addressExact,
       dto.preparedAt,
       dto.expiresAt,
+      imageKeys,
     ]);
     return listing;
   }
