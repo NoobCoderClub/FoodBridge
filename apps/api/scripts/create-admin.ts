@@ -4,8 +4,8 @@ import { auth } from '../src/modules/auth/auth.config';
 
 // Creates (or promotes an existing) admin account. There is no admin signup
 // path in the app itself — the M1 design is that admins are seeded directly,
-// never self-registered (auth.config.ts's create hook hard-coerces any
-// signup-time role to 'poster'/'taker'). This script goes through Better
+// never self-registered (auth.config.ts's create hook hard-coerces every
+// signup to a pending 'member'). This script goes through Better
 // Auth's own signUpEmail so the password is hashed exactly like a normal
 // signup, then promotes the resulting row straight in the database, since
 // there's no API route that would ever accept role: 'admin'.

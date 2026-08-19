@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from 'react';
 import Link from 'next/link';
-import { MapPin, PlusCircle, Search, Sprout, UtensilsCrossed } from 'lucide-react';
+import { MapPin, PlusCircle, Sprout, UtensilsCrossed } from 'lucide-react';
 import type { ListingStatus } from '@repo/types';
 import { Button } from '@repo/ui/button';
 import { cardVariants } from '@repo/ui/card';
@@ -16,7 +16,6 @@ import { Tabs, TabsList, TabsTrigger } from '@repo/ui/tabs';
 import { TimeRemaining } from '@repo/ui/countdown';
 import { formatDateTime, formatQuantity } from '@repo/ui/lib/format';
 import { cn } from '@repo/ui/lib/utils';
-import { useCurrentUser } from '@/features/auth/hooks/use-current-user';
 import { useMyListings } from '@/features/listings/hooks/use-my-listings';
 import type { MyListing } from '@/features/listings/types';
 
@@ -80,7 +79,6 @@ function MyListingCard({ listing }: { listing: MyListing }) {
 }
 
 export default function MyListingsPage() {
-  const { data: user, isLoading: userLoading } = useCurrentUser();
   const { data: listings, isLoading, error, refetch } = useMyListings();
   const [filter, setFilter] = useState<Filter>('all');
 
@@ -89,7 +87,7 @@ export default function MyListingsPage() {
     return filter === 'all' ? listings : listings.filter((l) => l.status === filter);
   }, [listings, filter]);
 
-  if (userLoading || isLoading) {
+  if (isLoading) {
     return (
       <PageShell className="space-y-8">
         <div className="grid gap-4 sm:grid-cols-2">
@@ -97,24 +95,6 @@ export default function MyListingsPage() {
             <CardSkeleton key={index} />
           ))}
         </div>
-      </PageShell>
-    );
-  }
-
-  if (user?.role !== 'poster') {
-    return (
-      <PageShell>
-        <EmptyState
-          icon={<Search aria-hidden="true" />}
-          title="This view is for food posters"
-          description="You’re signed in as a taker. Browse what’s available near you instead."
-          action={
-            <Button render={<Link href="/listings" />}>
-              <Search aria-hidden="true" />
-              Browse food near you
-            </Button>
-          }
-        />
       </PageShell>
     );
   }
@@ -142,7 +122,7 @@ export default function MyListingsPage() {
         <EmptyState
           icon={<Sprout aria-hidden="true" />}
           title="You haven’t posted anything yet"
-          description="Share your surplus food and approved takers nearby will be able to claim it within minutes."
+          description="Share your surplus food and approved members nearby will be able to claim it within minutes."
           action={
             <Button render={<Link href="/listings/new" />}>
               <PlusCircle aria-hidden="true" />

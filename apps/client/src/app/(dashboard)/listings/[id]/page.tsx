@@ -68,7 +68,11 @@ export default function ListingDetailPage({ params }: { params: Promise<{ id: st
   const myActiveClaim = myClaims?.find(
     (claim) => claim.listing_id === listing.id && claim.status === 'active',
   );
-  const canClaim = user?.role === 'taker' && listing.status === 'available' && !myActiveClaim;
+  // One profile posts and claims, so the only thing standing between a member
+  // and this button is owning the listing. `sp_claim_listing` rejects a
+  // self-claim regardless — this just avoids offering an action that would 409.
+  const isMine = listing.poster_id === user?.id;
+  const canClaim = !isMine && listing.status === 'available' && !myActiveClaim;
 
   const details = [
     {
@@ -83,7 +87,12 @@ export default function ListingDetailPage({ params }: { params: Promise<{ id: st
 
   return (
     <PageShell width="narrow" className="space-y-6">
-      <Button variant="ghost" size="sm" className="-ml-2" render={<Link href="/listings" />}>
+      <Button
+        variant="ghost"
+        size="sm"
+        className="-ml-2"
+        render={<Link href={isMine ? '/my-listings' : '/listings'} />}
+      >
         <ArrowLeft aria-hidden="true" />
         Back
       </Button>
@@ -123,6 +132,13 @@ export default function ListingDetailPage({ params }: { params: Promise<{ id: st
           </div>
         ))}
       </Card>
+
+      {isMine ? (
+        <p className="rounded-lg bg-muted px-4 py-3 text-sm text-muted-foreground">
+          You posted this listing, so you can’t claim it yourself. You’ll see the collector’s
+          details here once someone does.
+        </p>
+      ) : null}
 
       {canClaim ? <ClaimButton listingId={listing.id} foodType={listing.food_type} /> : null}
 

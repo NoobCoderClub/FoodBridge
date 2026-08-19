@@ -28,23 +28,23 @@ export class ListingsController {
 
   @Post()
   @UseGuards(RolesGuard)
-  @Roles('poster')
+  @Roles('member')
   create(@Req() req: AuthenticatedRequest, @Body() dto: CreateListingDto) {
     return this.listingsService.create(req.user.id, dto);
   }
 
   @Get()
   @UseGuards(RolesGuard)
-  @Roles('taker')
-  browse(@Query() query: BrowseListingsDto) {
-    return this.listingsService.browse(query.lat, query.lng);
+  @Roles('member')
+  browse(@Req() req: AuthenticatedRequest, @Query() query: BrowseListingsDto) {
+    return this.listingsService.browse(req.user.id, query.lat, query.lng);
   }
 
   // Declared before `:id` — Nest matches routes in declaration order, so the
   // literal path must win over the parameterised one.
   @Get('mine')
   @UseGuards(RolesGuard)
-  @Roles('poster')
+  @Roles('member')
   listMine(@Req() req: AuthenticatedRequest) {
     return this.listingsService.listMine(req.user.id);
   }
@@ -56,7 +56,7 @@ export class ListingsController {
 
   @Post(':id/claim')
   @UseGuards(RolesGuard)
-  @Roles('taker')
+  @Roles('member')
   claim(@Req() req: AuthenticatedRequest, @Param('id') id: string) {
     return this.claimsService.claim(id, req.user.id);
   }

@@ -11,10 +11,11 @@ import type {
 export class ListingsRepository {
   constructor(private readonly db: DatabaseService) {}
 
-  browse(lat?: number, lng?: number): Promise<Listing[]> {
+  browse(viewerId: string, lat?: number, lng?: number): Promise<Listing[]> {
     return this.db.callFunction<Listing>('fn_browse_listings', [
       lat ?? null,
       lng ?? null,
+      viewerId,
     ]);
   }
 

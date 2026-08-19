@@ -16,12 +16,12 @@ import { ThemeToggle } from '@repo/ui/theme-toggle';
 const STEPS = [
   {
     icon: Store,
-    title: 'A poster lists surplus',
+    title: 'Someone lists surplus',
     body: 'A restaurant, cafe, caterer or event organiser posts what’s left over, how much of it there is, and when it stops being good to eat.',
   },
   {
     icon: MapPin,
-    title: 'A taker nearby claims it',
+    title: 'Someone nearby claims it',
     body: 'Approved NGOs, shelters and neighbours see listings sorted by distance and time-to-expiry, and claim the one they can actually reach.',
   },
   {
@@ -31,10 +31,11 @@ const STEPS = [
   },
 ];
 
+// Two things one account does, not two kinds of account.
 const AUDIENCES = [
   {
     icon: Store,
-    eyebrow: 'For food posters',
+    eyebrow: 'Give surplus',
     title: 'Surplus shouldn’t mean waste',
     points: [
       'Post what’s left in under a minute',
@@ -46,12 +47,12 @@ const AUDIENCES = [
   },
   {
     icon: HandHeart,
-    eyebrow: 'For food takers',
+    eyebrow: 'Collect nearby',
     title: 'Good food, close by, right now',
     points: [
       'Listings ranked by how close and how urgent they are',
       'A live countdown so you know exactly how long you have',
-      'Call the poster directly — no in-app back and forth',
+      'Call whoever posted it directly — no in-app back and forth',
     ],
     href: '/signup',
     cta: 'Find food near you',
@@ -110,15 +111,17 @@ export default function Home() {
 
               <div className="mt-9 flex flex-col justify-center gap-3 sm:flex-row">
                 <Button size="lg" render={<Link href="/signup" />}>
-                  <Store aria-hidden="true" />I have food to give
+                  <Sprout aria-hidden="true" />
+                  Create an account
                 </Button>
-                <Button size="lg" variant="outline" render={<Link href="/signup" />}>
-                  <HandHeart aria-hidden="true" />I need food
+                <Button size="lg" variant="outline" render={<Link href="/login" />}>
+                  Log in
                 </Button>
               </div>
 
               <p className="mt-4 text-sm text-muted-foreground">
-                Free to use. Every account is reviewed before it goes live.
+                One account gives and takes. Free to use, and every account is reviewed before it
+                goes live.
               </p>
             </div>
           </div>

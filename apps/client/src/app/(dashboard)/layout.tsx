@@ -4,7 +4,7 @@ import { useRouter } from 'next/navigation';
 import { useEffect } from 'react';
 import { useIsFetching, useQueryClient } from '@tanstack/react-query';
 import { Sprout } from 'lucide-react';
-import type { AccountStatus, UserRole } from '@repo/types';
+import type { AccountStatus } from '@repo/types';
 import { AppNav } from '@/components/app-nav';
 import { AccountStatusScreen } from '@/components/account-status-screen';
 import { useCurrentUser } from '@/features/auth/hooks/use-current-user';
@@ -35,10 +35,9 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
   if (!user) return null;
 
-  // better-auth's inferAdditionalFields types these as loose strings, so narrow
-  // them once here rather than widening every component that consumes them.
+  // better-auth's inferAdditionalFields types this as a loose string, so narrow
+  // it once here rather than widening every component that consumes it.
   const status = user.status as AccountStatus | null | undefined;
-  const role: UserRole = user.role === 'poster' ? 'poster' : 'taker';
 
   if (status !== 'approved') {
     const gated: Exclude<AccountStatus, 'approved'> =
@@ -59,12 +58,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
   return (
     <div className="flex min-h-svh flex-col">
-      <AppNav
-        role={role}
-        userName={user.name}
-        onLogout={() => logout.mutate()}
-        loggingOut={logout.isPending}
-      />
+      <AppNav userName={user.name} onLogout={() => logout.mutate()} loggingOut={logout.isPending} />
       <div className="flex-1">{children}</div>
     </div>
   );

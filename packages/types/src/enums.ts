@@ -1,4 +1,7 @@
-export type UserRole = 'poster' | 'taker' | 'admin';
+// One customer-facing profile: a `member` both posts surplus food and claims it.
+// Poster/taker survive as per-exchange positions (`listings.poster_id`,
+// `claims.taker_id`), never as account types.
+export type UserRole = 'member' | 'admin';
 
 export type AccountStatus = 'pending' | 'approved' | 'rejected' | 'suspended';
 
