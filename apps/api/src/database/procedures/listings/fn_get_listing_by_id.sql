@@ -1,6 +1,12 @@
 -- Single listing, with contact details revealed only to the poster or to a
 -- taker holding an active claim. The two access flags are computed once in
--- `access` and reused by both reveal rules. `active_claim_id` lets either
+-- `access` and reused by every reveal rule.
+--
+-- Coordinates sit behind the same gate as `address_exact`: a latitude and
+-- longitude are a more precise statement of the exact address, so returning
+-- them to every browsing taker would defeat the gate entirely. Only
+-- `address_approx` and the caller-relative `distance_km` from
+-- `fn_browse_listings` are public. `active_claim_id` lets either
 -- party drive a "mark completed" action straight off this response, without
 -- a separate lookup — a listing has at most one active claim (enforced by
 -- the M0 partial unique index), so the join can't fan out rows.
@@ -49,8 +55,8 @@ as $$
     a.food_type,
     a.quantity,
     a.quantity_unit,
-    a.latitude,
-    a.longitude,
+    case when a.is_poster or a.has_active_claim then a.latitude end,
+    case when a.is_poster or a.has_active_claim then a.longitude end,
     a.address_approx,
     case when a.is_poster or a.has_active_claim then a.address_exact end,
     a.prepared_at,

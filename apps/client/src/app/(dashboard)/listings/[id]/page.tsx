@@ -154,6 +154,8 @@ export default function ListingDetailPage({ params }: { params: Promise<{ id: st
           addressExact={listing.address_exact}
           posterPhone={listing.poster_phone}
           pickupDeadline={myActiveClaim.pickup_deadline}
+          latitude={listing.latitude}
+          longitude={listing.longitude}
         />
       ) : null}
 

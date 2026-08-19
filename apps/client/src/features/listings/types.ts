@@ -27,8 +27,9 @@ export interface ListingDetail {
   food_type: string;
   quantity: string;
   quantity_unit: QuantityUnit;
-  latitude: number;
-  longitude: number;
+  /** Null unless you are the poster or hold an active claim. */
+  latitude: number | null;
+  longitude: number | null;
   address_approx: string;
   address_exact: string | null;
   prepared_at: string;
