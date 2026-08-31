@@ -90,8 +90,9 @@ export default function Home() {
         <section className="relative overflow-hidden">
           <div
             aria-hidden="true"
-            className="pointer-events-none absolute -top-40 left-1/2 size-[36rem] -translate-x-1/2 rounded-full bg-primary/10 blur-3xl"
+            className="pointer-events-none absolute -top-40 left-1/2 size-144 -translate-x-1/2 rounded-full bg-primary/10 blur-3xl"
           />
+
           <div className="relative mx-auto w-full max-w-6xl px-4 py-20 sm:px-6 sm:py-28">
             <div className="mx-auto max-w-3xl text-center">
               <span className="inline-flex items-center gap-2 rounded-full border border-border bg-card px-3 py-1 text-sm text-muted-foreground shadow-soft">
@@ -100,28 +101,27 @@ export default function Home() {
               </span>
 
               <h1 className="mt-6 text-4xl font-semibold tracking-tight text-balance sm:text-5xl lg:text-6xl">
-                Surplus food, redistributed <span className="text-primary">before it spoils</span>.
+                Good food deserves a <span className="text-primary">second chance.</span>
               </h1>
 
               <p className="mx-auto mt-6 max-w-2xl text-lg text-muted-foreground text-pretty">
-                Restaurants and caterers end each day with food nobody bought. Shelters and
-                neighbours nearby could use it tonight. FoodBridge is the bridge between them — in
-                real time, before the clock runs out.
+                FoodBridge connects restaurants with people and communities who need surplus food —
+                helping good meals reach the table instead of going to waste.
               </p>
 
               <div className="mt-9 flex flex-col justify-center gap-3 sm:flex-row">
                 <Button size="lg" render={<Link href="/signup" />}>
                   <Sprout aria-hidden="true" />
-                  Create an account
+                  Get started
                 </Button>
+
                 <Button size="lg" variant="outline" render={<Link href="/login" />}>
                   Log in
                 </Button>
               </div>
 
               <p className="mt-4 text-sm text-muted-foreground">
-                One account gives and takes. Free to use, and every account is reviewed before it
-                goes live.
+                Give surplus food a purpose. Find what you need. Make a difference.
               </p>
             </div>
           </div>
@@ -129,31 +129,84 @@ export default function Home() {
 
         {/* How it works */}
         <section className="border-t border-border bg-muted/30">
-          <div className="mx-auto w-full max-w-6xl px-4 py-20 sm:px-6">
-            <div className="max-w-2xl">
-              <h2 className="text-3xl font-semibold tracking-tight">How it works</h2>
-              <p className="mt-3 text-muted-foreground">
-                Three steps, one pickup window, no warehousing in between.
-              </p>
+          <div className="mx-auto w-full max-w-6xl px-4 py-20 sm:px-6 sm:py-24">
+            {/* Section Header */}
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+              <div className="max-w-2xl">
+                <span className="text-sm font-medium text-primary">Simple process</span>
+
+                <h2 className="mt-2 text-3xl font-semibold tracking-tight sm:text-4xl">
+                  How it works
+                </h2>
+
+                <p className="mt-3 text-muted-foreground">
+                  Three steps, one pickup window, no warehousing in between.
+                </p>
+              </div>
+
+              <div className="hidden text-sm text-muted-foreground sm:block">
+                From surplus to shared
+              </div>
             </div>
 
-            <ol className="mt-12 grid gap-6 md:grid-cols-3">
+            {/* Steps */}
+            <ol className="mt-12 grid gap-5 md:grid-cols-3 md:gap-6">
               {STEPS.map((step, index) => (
-                <li key={step.title}>
-                  <Card className="h-full gap-4 p-6">
-                    <div className="flex items-center gap-3">
-                      <span className="flex size-10 items-center justify-center rounded-xl bg-primary/10 text-primary">
+                <li key={step.title} className="group relative">
+                  <Card
+                    className="
+              relative h-full overflow-hidden border-border/70
+              bg-card/80 p-6 shadow-sm
+              transition-all duration-300
+              hover:-translate-y-1 hover:shadow-lg
+              sm:p-7
+            "
+                  >
+                    {/* Background number */}
+                    <span
+                      aria-hidden="true"
+                      className="
+                pointer-events-none absolute -right-3 -top-7
+                text-8xl font-bold tracking-tighter
+                text-primary/5 transition-colors duration-300
+                group-hover:text-primary/10
+              "
+                    >
+                      {String(index + 1).padStart(2, '0')}
+                    </span>
+
+                    {/* Top row */}
+                    <div className="relative flex items-center justify-between">
+                      <div className="flex size-12 items-center justify-center rounded-2xl bg-primary/10 text-primary ring-1 ring-primary/10 transition-transform duration-300 group-hover:scale-105">
                         <step.icon className="size-5" aria-hidden="true" />
-                      </span>
-                      <span className="tabular text-sm font-medium text-muted-foreground">
+                      </div>
+
+                      <span className="rounded-full border border-border bg-muted/50 px-3 py-1 text-xs font-medium text-muted-foreground">
                         Step {index + 1}
                       </span>
                     </div>
-                    <div>
-                      <h3 className="font-semibold">{step.title}</h3>
-                      <p className="mt-2 text-sm text-muted-foreground">{step.body}</p>
+
+                    {/* Content */}
+                    <div className="relative mt-8">
+                      <h3 className="text-lg font-semibold tracking-tight">{step.title}</h3>
+
+                      <p className="mt-2 text-sm leading-6 text-muted-foreground">{step.body}</p>
                     </div>
+
+                    {/* Bottom accent */}
+                    <div className="absolute inset-x-0 bottom-0 h-0.5 origin-left scale-x-0 bg-primary transition-transform duration-300 group-hover:scale-x-100" />
                   </Card>
+
+                  {/* Connector */}
+                  {index < STEPS.length - 1 && (
+                    <div
+                      aria-hidden="true"
+                      className="
+                absolute left-[calc(100%+6px)] top-1/2 hidden
+                h-px w-4 bg-border md:block
+              "
+                    />
+                  )}
                 </li>
               ))}
             </ol>
@@ -222,36 +275,71 @@ export default function Home() {
 
         {/* Audience split */}
         <section className="border-t border-border bg-muted/30">
-          <div className="mx-auto w-full max-w-6xl px-4 py-20 sm:px-6">
+          <div className="mx-auto w-full max-w-6xl px-4 py-20 sm:px-6 lg:py-24">
+            {/* Section heading */}
+            <div className="mx-auto mb-12 max-w-2xl text-center">
+              <p className="text-sm font-medium text-primary">Built for everyone</p>
+              <h2 className="mt-2 text-3xl font-semibold tracking-tight text-balance sm:text-4xl">
+                One platform, two ways to make a difference
+              </h2>
+              <p className="mt-4 text-muted-foreground">
+                Whether you have surplus food or want to help put it to good use, FoodBridge makes
+                the process simple.
+              </p>
+            </div>
+            {/* Audience cards */}
             <div className="grid gap-6 md:grid-cols-2">
               {AUDIENCES.map((audience) => (
-                <Card key={audience.eyebrow} className="gap-5 p-8">
-                  <span className="flex size-11 items-center justify-center rounded-xl bg-primary/10 text-primary">
-                    <audience.icon className="size-5.5" aria-hidden="true" />
-                  </span>
-                  <div>
-                    <p className="text-sm font-medium text-primary">{audience.eyebrow}</p>
-                    <h3 className="mt-1 text-xl font-semibold">{audience.title}</h3>
+                <Card
+                  key={audience.eyebrow}
+                  className="group relative gap-6 overflow-hidden p-7 transition-shadow hover:shadow-md sm:p-8"
+                >
+                  {/* Icon + label */}
+                  <div className="flex items-start justify-between gap-4">
+                    <span className="flex size-12 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
+                      <audience.icon className="size-6" aria-hidden="true" />
+                    </span>
+                    <span className="rounded-full border border-border px-3 py-1 text-xs font-medium text-muted-foreground">
+                      {audience.eyebrow}
+                    </span>
                   </div>
-                  <ul className="space-y-2.5">
+                  {/* Heading */}
+                  <div>
+                    <h3 className="text-2xl font-semibold tracking-tight">{audience.title}</h3>
+                    <p className="mt-2 text-sm leading-6 text-muted-foreground">
+                      {audience.eyebrow === 'For businesses'
+                        ? "Turn today's surplus into an opportunity to help someone nearby."
+                        : 'Find available surplus food nearby before it goes to waste.'}
+                    </p>
+                  </div>
+                  {/* Benefits */}
+                  <ul className="space-y-3 border-t border-border pt-5">
                     {audience.points.map((point) => (
-                      <li key={point} className="flex items-start gap-2.5 text-sm">
+                      <li key={point} className="flex items-start gap-3 text-sm">
                         <span
                           aria-hidden="true"
-                          className="mt-1.5 size-1.5 shrink-0 rounded-full bg-primary"
-                        />
-                        <span className="text-muted-foreground">{point}</span>
+                          className="mt-1 flex size-4 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary"
+                        >
+                          <span className="size-1.5 rounded-full bg-primary" />
+                        </span>
+                        <span className="leading-5 text-muted-foreground">{point}</span>
                       </li>
                     ))}
                   </ul>
-                  <Button
-                    variant="outline"
-                    className="mt-1 w-fit"
-                    render={<Link href={audience.href} />}
-                  >
-                    {audience.cta}
-                    <ArrowRight aria-hidden="true" />
-                  </Button>
+                  {/* CTA */}
+                  <div className="mt-auto pt-1">
+                    <Button
+                      variant="outline"
+                      className="group-hover:border-primary group-hover:text-primary"
+                      render={<Link href={audience.href} />}
+                    >
+                      {audience.cta}
+                      <ArrowRight
+                        className="transition-transform group-hover:translate-x-0.5"
+                        aria-hidden="true"
+                      />
+                    </Button>
+                  </div>
                 </Card>
               ))}
             </div>
