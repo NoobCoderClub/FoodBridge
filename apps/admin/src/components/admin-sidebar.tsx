@@ -18,6 +18,7 @@ function NavLinks({ pathname, onNavigate }: { pathname: string; onNavigate?: () 
     <>
       {LINKS.map((link) => {
         const active = pathname === link.href || pathname.startsWith(`${link.href}/`);
+
         return (
           <Link
             key={link.href}
@@ -25,14 +26,24 @@ function NavLinks({ pathname, onNavigate }: { pathname: string; onNavigate?: () 
             aria-current={active ? 'page' : undefined}
             onClick={onNavigate}
             className={cn(
-              'flex h-10 items-center gap-3 rounded-lg px-3 text-sm font-medium transition-colors',
-              'focus-visible:ring-3 focus-visible:ring-sidebar-ring/40 focus-visible:outline-none',
+              'flex h-11 items-center gap-3 rounded-xl px-3 text-sm font-medium transition-all',
+              'focus-visible:ring-2 focus-visible:ring-sidebar-ring/40 focus-visible:outline-none',
               active
-                ? 'bg-sidebar-accent text-sidebar-accent-foreground'
-                : 'text-sidebar-foreground/70 hover:bg-sidebar-accent/60 hover:text-sidebar-accent-foreground',
+                ? 'bg-sidebar-accent text-sidebar-accent-foreground shadow-sm'
+                : 'text-sidebar-foreground/65 hover:bg-sidebar-accent/70 hover:text-sidebar-accent-foreground',
             )}
           >
-            <link.icon className="size-4 shrink-0" aria-hidden="true" />
+            <span
+              className={cn(
+                'flex size-8 items-center justify-center rounded-lg',
+                active
+                  ? 'bg-sidebar-primary/10 text-sidebar-primary'
+                  : 'text-sidebar-foreground/50',
+              )}
+            >
+              <link.icon className="size-4" aria-hidden="true" />
+            </span>
+
             {link.label}
           </Link>
         );
@@ -58,13 +69,15 @@ export function AdminSidebar({
   const brand = (
     <Link
       href="/accounts"
-      className="flex items-center gap-2 font-semibold tracking-tight text-sidebar-foreground"
+      className="flex items-center gap-2.5 font-semibold tracking-tight text-sidebar-foreground"
     >
-      <span className="flex size-8 items-center justify-center rounded-lg bg-sidebar-primary text-sidebar-primary-foreground">
+      <span className="flex size-9 items-center justify-center rounded-xl bg-sidebar-primary text-sidebar-primary-foreground shadow-sm">
         <ShieldCheck className="size-4.5" aria-hidden="true" />
       </span>
-      FoodBridge
-      <span className="text-sidebar-foreground/50">Admin</span>
+
+      <span>
+        FoodBridge <span className="text-xs font-medium text-sidebar-foreground/40">Admin</span>
+      </span>
     </Link>
   );
 
@@ -72,16 +85,22 @@ export function AdminSidebar({
     <div className="flex min-h-svh">
       {/* Desktop sidebar */}
       <aside className="hidden w-60 shrink-0 flex-col border-r border-sidebar-border bg-sidebar lg:flex">
-        <div className="flex h-16 items-center px-4">{brand}</div>
+        <div className="flex h-16 items-center border-b border-sidebar-border px-4">{brand}</div>
+
         <nav aria-label="Admin" className="flex flex-1 flex-col gap-1 p-3">
-          <NavLinks pathname={pathname} />
+          {NavLinks({ pathname })}
         </nav>
-        <div className="space-y-2 border-t border-sidebar-border p-3">
-          <p className="truncate px-3 text-xs text-sidebar-foreground/60">{userName}</p>
+
+        <div className="border-t border-sidebar-border p-3">
+          <div className="mb-2 rounded-xl bg-sidebar-accent/50 px-3 py-2.5">
+            <p className="truncate text-xs font-medium text-sidebar-foreground/70">{userName}</p>
+            <p className="text-[10px] text-sidebar-foreground/40">Administrator</p>
+          </div>
+
           <Button
             variant="ghost"
             block
-            className="justify-start"
+            className="justify-start rounded-xl text-sidebar-foreground/60 hover:bg-destructive/10 hover:text-destructive"
             onClick={onLogout}
             loading={loggingOut}
           >
@@ -95,8 +114,10 @@ export function AdminSidebar({
         {/* Mobile top bar */}
         <header className="sticky top-0 z-40 flex h-16 items-center gap-2 border-b border-border bg-background/85 px-4 backdrop-blur-md lg:hidden">
           {brand}
+
           <div className="ml-auto flex items-center gap-1">
             <ThemeToggle />
+
             <Button
               variant="ghost"
               size="icon-sm"
@@ -116,13 +137,12 @@ export function AdminSidebar({
             aria-label="Admin"
             className="flex flex-col gap-1 border-b border-border bg-sidebar p-3 lg:hidden"
           >
-            {/* Dismiss on navigation — a route change should never leave the
-                mobile menu hanging open. */}
             <NavLinks pathname={pathname} onNavigate={() => setMobileOpen(false)} />
+
             <Button
               variant="outline"
               block
-              className="mt-2"
+              className="mt-2 rounded-xl"
               onClick={onLogout}
               loading={loggingOut}
             >
@@ -132,7 +152,7 @@ export function AdminSidebar({
           </nav>
         ) : null}
 
-        {/* Desktop header strip carries the theme toggle */}
+        {/* Desktop header */}
         <div className="hidden h-16 items-center justify-end border-b border-border px-6 lg:flex">
           <ThemeToggle />
         </div>
