@@ -54,7 +54,7 @@ export function ListingList() {
         </p>
       ) : null}
 
-      <div className="grid gap-4 sm:grid-cols-2">
+      <div className="grid gap-4 sm:grid-cols-2 md:grid-cols-3">
         {data.map((listing) => (
           <ListingCard key={listing.id} listing={listing} />
         ))}

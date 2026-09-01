@@ -16,9 +16,9 @@ import { Tabs, TabsList, TabsTrigger } from '@repo/ui/tabs';
 import { TimeRemaining } from '@repo/ui/countdown';
 import { formatDateTime, formatQuantity } from '@repo/ui/lib/format';
 import { cn } from '@repo/ui/lib/utils';
-import { ListingThumb } from '@/features/listings/components/listing-thumb';
 import { useMyListings } from '@/features/listings/hooks/use-my-listings';
 import type { MyListing } from '@/features/listings/types';
+import { MyListingThumb } from '@/features/listings/components/my-listing-thumb';
 
 type Filter = 'all' | ListingStatus;
 
@@ -40,7 +40,7 @@ function MyListingCard({ listing }: { listing: MyListing }) {
     >
       <div className="flex items-start justify-between gap-3">
         <div className="flex min-w-0 items-start gap-3">
-          <ListingThumb url={listing.thumbnail_url} />
+          <MyListingThumb url={listing.thumbnail_url} />
           <div className="min-w-0">
             <h3 className="truncate font-semibold transition-colors group-hover:text-primary">
               {listing.food_type}
