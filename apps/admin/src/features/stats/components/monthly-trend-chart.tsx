@@ -58,9 +58,16 @@ export function MonthlyTrendChart({ trend }: { trend: MonthlyTrendPoint[] }) {
   return (
     <Card className="gap-5 p-5">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h2 className="text-base font-semibold">Monthly trend</h2>
-          <p className="mt-0.5 text-sm text-muted-foreground">{active.label} rescued per month.</p>
+        <div className="flex justify-center gap-4">
+          <div className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
+            <TrendingUp className="size-5" aria-hidden="true" />
+          </div>
+          <div>
+            <h2 className="text-base font-semibold">Monthly trend</h2>
+            <p className="mt-0.5 text-sm text-muted-foreground">
+              {active.label} rescued per month.
+            </p>
+          </div>
         </div>
         <Tabs value={measure} onValueChange={(value) => setMeasure(value as Measure)}>
           <TabsList>

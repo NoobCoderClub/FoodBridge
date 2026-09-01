@@ -44,9 +44,14 @@ export function TopDonorsChart({ donors }: { donors: TopDonor[] }) {
 
   return (
     <Card className="gap-5 p-5">
-      <div>
-        <h2 className="text-base font-semibold">Top donors</h2>
-        <p className="mt-0.5 text-sm text-muted-foreground">Ranked by completed pickups.</p>
+      <div className="flex gap-4">
+        <div className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
+          <Trophy className="size-5" aria-hidden="true" />
+        </div>
+        <div>
+          <h2 className="text-base font-semibold">Top donors</h2>
+          <p className="mt-0.5 text-sm text-muted-foreground">Ranked by completed pickups.</p>
+        </div>
       </div>
 
       {data.length === 0 ? (

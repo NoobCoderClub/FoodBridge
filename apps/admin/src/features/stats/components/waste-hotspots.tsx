@@ -13,11 +13,16 @@ export function WasteHotspots({ hotspots }: { hotspots: WasteHotspot[] }) {
 
   return (
     <Card className="gap-5 p-5">
-      <div>
-        <h2 className="text-base font-semibold">Waste hotspots</h2>
-        <p className="mt-0.5 text-sm text-muted-foreground">
-          Areas where the most listings expired uncollected.
-        </p>
+      <div className="flex gap-4">
+        <div className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
+          <MapPinned className="size-5" aria-hidden="true" />
+        </div>
+        <div>
+          <h2 className="text-base font-semibold">Waste hotspots</h2>
+          <p className="mt-0.5 text-sm text-muted-foreground">
+            Areas where the most listings expired uncollected.
+          </p>
+        </div>
       </div>
 
       {hotspots.length === 0 ? (
