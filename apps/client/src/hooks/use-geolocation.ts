@@ -65,16 +65,34 @@ export function useGeolocation({
   immediate = true,
   enableHighAccuracy = false,
 }: UseGeolocationOptions = {}) {
-  const supported = isGeolocationSupported();
+  // `navigator` doesn't exist during SSR, so support can only be determined
+  // client-side. The initial state must be a `navigator`-independent literal
+  // — identical on the server and on the client's first render — or React
+  // hydration sees two different states for the same paint and mismatches.
   const [state, setState] = useState<GeolocationState>({
-    failure: supported ? null : 'unavailable',
-    loading: immediate && supported,
+    failure: null,
+    loading: immediate,
   });
 
   useEffect(() => {
-    if (!immediate || !isGeolocationSupported()) return;
+    if (!immediate) return;
 
     let cancelled = false;
+
+    // Effects never run during SSR and only run after the client's first
+    // paint, so this is the correct — and only safe — place to feature-detect.
+    // Deferred to a microtask rather than called synchronously here: state is
+    // only ever written from a callback (see above), never straight out of
+    // the effect body, so this stays consistent with the branch below.
+    if (!isGeolocationSupported()) {
+      queueMicrotask(() => {
+        if (!cancelled) setState({ failure: 'unavailable', loading: false });
+      });
+      return () => {
+        cancelled = true;
+      };
+    }
+
     navigator.geolocation.getCurrentPosition(
       (position) => {
         if (cancelled) return;
@@ -126,5 +144,14 @@ export function useGeolocation({
     [enableHighAccuracy],
   );
 
-  return { ...state, denied: state.failure !== null, supported, request };
+  // Unused by any current consumer's JSX, so a value that differs between
+  // SSR and the client's first render never reaches the DOM and can't cause
+  // a hydration mismatch. If a future caller renders this conditionally,
+  // move the check into the effect instead of reading it here.
+  return {
+    ...state,
+    denied: state.failure !== null,
+    supported: isGeolocationSupported(),
+    request,
+  };
 }
