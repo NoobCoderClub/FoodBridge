@@ -75,6 +75,7 @@ export default function ListingDetailPage({ params }: { params: Promise<{ id: st
   // self-claim regardless — this just avoids offering an action that would 409.
   const isMine = listing.poster_id === user?.id;
 
+  const isExpired = listing.status === 'expired' || new Date(listing.expires_at) <= new Date();
   const canClaim = !isMine && listing.status === 'available' && !myActiveClaim;
 
   const details = [
