@@ -29,17 +29,17 @@ export default function ListingDetailPage({ params }: { params: Promise<{ id: st
 
   if (isLoading) {
     return (
-      <PageShell width="narrow" className="space-y-6">
-        <Skeleton className="h-9 w-2/3" />
-        <Skeleton className="h-40 w-full rounded-xl" />
-        <Skeleton className="h-11 w-full rounded-lg" />
+      <PageShell width="narrow" className="space-y-7 py-6 sm:py-8">
+        <Skeleton className="h-8 w-2/3 rounded-lg" />
+        <Skeleton className="h-56 w-full rounded-2xl sm:h-72" />
+        <Skeleton className="h-12 w-full rounded-xl" />
       </PageShell>
     );
   }
 
   if (error) {
     return (
-      <PageShell width="narrow">
+      <PageShell width="narrow" className="py-6 sm:py-8">
         <ErrorState
           title="Couldn’t load this listing"
           description={error.message}
@@ -51,7 +51,7 @@ export default function ListingDetailPage({ params }: { params: Promise<{ id: st
 
   if (!listing) {
     return (
-      <PageShell width="narrow">
+      <PageShell width="narrow" className="py-6 sm:py-8">
         <EmptyState
           icon={<UtensilsCrossed aria-hidden="true" />}
           title="Listing not found"
@@ -69,13 +69,13 @@ export default function ListingDetailPage({ params }: { params: Promise<{ id: st
   const myActiveClaim = myClaims?.find(
     (claim) => claim.listing_id === listing.id && claim.status === 'active',
   );
+
   // One profile posts and claims, so the only thing standing between a member
   // and this button is owning the listing. `sp_claim_listing` rejects a
   // self-claim regardless — this just avoids offering an action that would 409.
   const isMine = listing.poster_id === user?.id;
-  // Check expiry by status or timestamp — the cron may not have flipped the status yet.
-  const isExpired = listing.status === 'expired' || new Date(listing.expires_at) <= new Date();
-  const canClaim = !isMine && listing.status === 'available' && !myActiveClaim && !isExpired;
+
+  const canClaim = !isMine && listing.status === 'available' && !myActiveClaim;
 
   const details = [
     {
@@ -89,11 +89,11 @@ export default function ListingDetailPage({ params }: { params: Promise<{ id: st
   ];
 
   return (
-    <PageShell width="narrow" className="space-y-6">
+    <PageShell width="narrow" className="space-y-7 py-5 sm:space-y-8 sm:py-8">
       <Button
         variant="ghost"
         size="sm"
-        className="-ml-2"
+        className="-ml-2 h-9 gap-2 rounded-lg px-3 text-muted-foreground hover:text-foreground"
         render={<Link href={isMine ? '/my-listings' : '/listings'} />}
       >
         <ArrowLeft aria-hidden="true" />
@@ -102,40 +102,56 @@ export default function ListingDetailPage({ params }: { params: Promise<{ id: st
 
       <ListingGallery urls={listing.image_urls} />
 
-      <div className="space-y-4">
-        <div className="flex items-start justify-between gap-4">
-          <div className="flex min-w-0 items-start gap-3">
-            {/* The chip is the stand-in when there are no photos — with a hero
-                above, a second icon beside the title is just noise. */}
+      <div className="space-y-5">
+        <div className="flex items-start justify-between gap-3 sm:gap-5">
+          <div className="flex min-w-0 items-start gap-3.5">
             {listing.image_urls.length === 0 ? (
-              <span className="flex size-12 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
-                <UtensilsCrossed className="size-6" aria-hidden="true" />
+              <span className="flex size-12 shrink-0 items-center justify-center rounded-xl border border-primary/10 bg-primary/10 text-primary shadow-sm sm:size-14">
+                <UtensilsCrossed className="size-6 sm:size-7" aria-hidden="true" />
               </span>
             ) : null}
-            <div className="min-w-0">
-              <h1 className="text-2xl font-semibold break-words">{listing.food_type}</h1>
-              <p className="mt-1 text-sm text-muted-foreground">
+
+            <div className="min-w-0 pt-0.5">
+              <h1 className="text-2xl font-semibold leading-tight tracking-tight wrap-break-word sm:text-3xl">
+                {listing.food_type}
+              </h1>
+
+              <p className="mt-1.5 text-sm font-medium text-muted-foreground">
                 {formatQuantity(listing.quantity, listing.quantity_unit)}
               </p>
             </div>
           </div>
-          <StatusBadge status={listing.status} className="shrink-0" />
+
+          <StatusBadge
+            status={listing.status}
+            className="shrink-0 rounded-full px-2.5 py-1 text-xs"
+          />
         </div>
 
-        <div className="space-y-2">
-          <ExpiryBar expiresAt={listing.expires_at} preparedAt={listing.prepared_at} />
-          <div className="flex justify-end">
+        <div className="rounded-2xl border border-border/70 bg-card p-4 shadow-sm sm:p-5">
+          <div className="mb-3 flex items-center justify-between gap-3">
+            <span className="text-sm font-medium">Pickup availability</span>
+
             <TimeRemaining expiresAt={listing.expires_at} />
           </div>
+
+          <ExpiryBar expiresAt={listing.expires_at} preparedAt={listing.prepared_at} />
         </div>
       </div>
 
-      <Card className="divide-y divide-border p-0">
+      <Card className="overflow-hidden rounded-2xl border-border/70 p-0 shadow-sm">
         {details.map((detail) => (
-          <div key={detail.label} className="flex items-center gap-3 px-5 py-3.5">
-            <detail.icon className="size-4 shrink-0 text-muted-foreground" aria-hidden="true" />
+          <div
+            key={detail.label}
+            className="flex min-h-14 items-center gap-3 border-b border-border/70 px-4 py-3.5 last:border-b-0 sm:px-5"
+          >
+            <span className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-muted text-muted-foreground">
+              <detail.icon className="size-4" aria-hidden="true" />
+            </span>
+
             <span className="text-sm text-muted-foreground">{detail.label}</span>
-            <span className="ml-auto text-right text-sm font-medium break-words">
+
+            <span className="ml-auto max-w-[60%] text-right text-sm font-medium wrap-break-word sm:max-w-[65%]">
               {detail.value}
             </span>
           </div>
@@ -143,7 +159,7 @@ export default function ListingDetailPage({ params }: { params: Promise<{ id: st
       </Card>
 
       {isMine ? (
-        <p className="rounded-lg bg-muted px-4 py-3 text-sm text-muted-foreground">
+        <p className="rounded-xl border border-border/70 bg-muted/50 px-4 py-3.5 text-sm leading-relaxed text-muted-foreground">
           You posted this listing, so you can’t claim it yourself. You’ll see the collector’s
           details here once someone does.
         </p>
