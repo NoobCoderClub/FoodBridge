@@ -1,4 +1,8 @@
-// POST /listings/:id/claim takes no request body — listingId comes from the
-// URL, takerId from the authenticated session. Kept as an explicit empty DTO
-// to match the module's dto/ convention and leave room for future fields.
-export class ClaimListingDto {}
+import { IsISO8601, IsNotEmpty } from 'class-validator';
+
+export class ClaimListingDto {
+  /** ISO 8601 timestamp chosen by the taker as their intended pickup time. */
+  @IsNotEmpty()
+  @IsISO8601()
+  pickupDeadline: string;
+}

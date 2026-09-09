@@ -147,7 +147,13 @@ export default function ListingDetailPage({ params }: { params: Promise<{ id: st
         </p>
       ) : null}
 
-      {canClaim ? <ClaimButton listingId={listing.id} foodType={listing.food_type} /> : null}
+      {canClaim ? (
+        <ClaimButton
+          listingId={listing.id}
+          foodType={listing.food_type}
+          listingExpiryTime={listing.expires_at}
+        />
+      ) : null}
 
       {myActiveClaim && listing.address_exact ? (
         <ContactCard

@@ -21,6 +21,7 @@ function ConfirmDialog({
   cancelLabel = 'Cancel',
   onConfirm,
   loading = false,
+  confirmDisabled = false,
   destructive = false,
   children,
   className,
@@ -34,6 +35,8 @@ function ConfirmDialog({
   cancelLabel?: string;
   onConfirm: () => void | Promise<void>;
   loading?: boolean;
+  /** Disables the confirm button without triggering the loading spinner. */
+  confirmDisabled?: boolean;
   destructive?: boolean;
   /** Extra content between the description and the actions (e.g. a reason field). */
   children?: React.ReactNode;
@@ -68,6 +71,7 @@ function ConfirmDialog({
               <Button
                 variant={destructive ? 'destructive-solid' : 'default'}
                 loading={loading}
+                disabled={confirmDisabled}
                 onClick={() => void onConfirm()}
               >
                 {confirmLabel}

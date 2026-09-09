@@ -6,8 +6,12 @@ import type { Claim, MyClaim } from './interfaces/claim.interface';
 export class ClaimsService {
   constructor(private readonly claimsRepository: ClaimsRepository) {}
 
-  claim(listingId: string, takerId: string): Promise<Claim> {
-    return this.claimsRepository.claim(listingId, takerId);
+  claim(
+    listingId: string,
+    takerId: string,
+    pickupDeadline: string,
+  ): Promise<Claim> {
+    return this.claimsRepository.claim(listingId, takerId, pickupDeadline);
   }
 
   listMine(takerId: string): Promise<MyClaim[]> {

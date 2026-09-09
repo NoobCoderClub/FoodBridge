@@ -6,10 +6,15 @@ import type { Claim, MyClaim } from './interfaces/claim.interface';
 export class ClaimsRepository {
   constructor(private readonly db: DatabaseService) {}
 
-  async claim(listingId: string, takerId: string): Promise<Claim> {
+  async claim(
+    listingId: string,
+    takerId: string,
+    pickupDeadline: string,
+  ): Promise<Claim> {
     const [claim] = await this.db.callFunction<Claim>('sp_claim_listing', [
       listingId,
       takerId,
+      pickupDeadline,
     ]);
     return claim;
   }
