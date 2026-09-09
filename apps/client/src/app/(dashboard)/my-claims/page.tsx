@@ -72,7 +72,7 @@ export default function MyClaimsPage() {
     <PageShell className="space-y-8">
       <PageHeader
         title="My claims"
-        description="Food you’ve reserved. Active claims have a 60-minute pickup window — collect them before the timer runs out."
+        description="Food you’ve reserved — collect them before your pickup timer runs out."
       />
 
       {isLoading ? (

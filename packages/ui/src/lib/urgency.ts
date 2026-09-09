@@ -38,13 +38,24 @@ export function formatRemaining(expiresAt: string | Date, now: number = Date.now
   return `${Math.ceil(ms / 1000)}s`;
 }
 
-/** mm:ss for the live pickup countdown. */
+/** Live pickup countdown formatted with day, hour, minute, and second. */
 export function formatCountdown(deadline: string | Date, now: number = Date.now()): string {
   const ms = msRemaining(deadline, now);
+  if (ms <= 0) return '0s';
+
   const totalSeconds = Math.floor(ms / 1000);
-  const minutes = Math.floor(totalSeconds / 60);
+  const days = Math.floor(totalSeconds / 86400);
+  const hours = Math.floor((totalSeconds % 86400) / 3600);
+  const minutes = Math.floor((totalSeconds % 3600) / 60);
   const seconds = totalSeconds % 60;
-  return `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+
+  const parts: string[] = [];
+  if (days > 0) parts.push(`${days}d`);
+  if (hours > 0 || days > 0) parts.push(`${hours}h`);
+  if (minutes > 0 || hours > 0 || days > 0) parts.push(`${minutes}m`);
+  parts.push(`${seconds}s`);
+
+  return parts.join(' ');
 }
 
 /**

@@ -1,8 +1,18 @@
 import { apiFetch } from '@/lib/api-client';
 import type { Claim, MyClaim } from '../types';
 
-export function claimListing(listingId: string) {
-  return apiFetch<Claim>(`/listings/${listingId}/claim`, { method: 'POST' });
+export function claimListing({
+  listingId,
+  pickupDeadline,
+}: {
+  listingId: string;
+  pickupDeadline: string;
+}) {
+  return apiFetch<Claim>(`/listings/${listingId}/claim`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ pickupDeadline }),
+  });
 }
 
 export function getMyClaims() {

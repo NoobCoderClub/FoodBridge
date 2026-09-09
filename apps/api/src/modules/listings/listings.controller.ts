@@ -14,6 +14,7 @@ import { RolesGuard } from '../auth/guards/roles.guard';
 import { StatusGuard } from '../auth/guards/status.guard';
 import type { AuthenticatedRequest } from '../auth/interfaces/authenticated-request.interface';
 import { ClaimsService } from '../claims/claims.service';
+import { ClaimListingDto } from '../claims/dto/claim-listing.dto';
 import { BrowseListingsDto } from './dto/browse-listings.dto';
 import { CreateListingDto } from './dto/create-listing.dto';
 import { ListingsService } from './listings.service';
@@ -57,7 +58,11 @@ export class ListingsController {
   @Post(':id/claim')
   @UseGuards(RolesGuard)
   @Roles('member')
-  claim(@Req() req: AuthenticatedRequest, @Param('id') id: string) {
-    return this.claimsService.claim(id, req.user.id);
+  claim(
+    @Req() req: AuthenticatedRequest,
+    @Param('id') id: string,
+    @Body() dto: ClaimListingDto,
+  ) {
+    return this.claimsService.claim(id, req.user.id, dto.pickupDeadline);
   }
 }

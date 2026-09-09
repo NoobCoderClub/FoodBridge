@@ -6,7 +6,7 @@ export function useClaimListing() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: claimListing,
-    onSuccess: (_data, listingId) => {
+    onSuccess: (_data, { listingId }) => {
       void queryClient.invalidateQueries({
         queryKey: listingKeys.detail(listingId),
       });
