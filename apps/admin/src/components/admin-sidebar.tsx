@@ -84,7 +84,7 @@ export function AdminSidebar({
   return (
     <div className="flex min-h-svh">
       {/* Desktop sidebar */}
-      <aside className="hidden w-60 shrink-0 flex-col border-r border-sidebar-border bg-sidebar lg:flex">
+      <aside className="sticky top-0 hidden h-svh w-60 shrink-0 flex-col border-r border-sidebar-border bg-sidebar lg:flex">
         <div className="flex h-16 items-center border-b border-sidebar-border px-4">{brand}</div>
 
         <nav aria-label="Admin" className="flex flex-1 flex-col gap-1 p-3">
