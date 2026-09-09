@@ -73,7 +73,9 @@ export default function ListingDetailPage({ params }: { params: Promise<{ id: st
   // and this button is owning the listing. `sp_claim_listing` rejects a
   // self-claim regardless — this just avoids offering an action that would 409.
   const isMine = listing.poster_id === user?.id;
-  const canClaim = !isMine && listing.status === 'available' && !myActiveClaim;
+  // Check expiry by status or timestamp — the cron may not have flipped the status yet.
+  const isExpired = listing.status === 'expired' || new Date(listing.expires_at) <= new Date();
+  const canClaim = !isMine && listing.status === 'available' && !myActiveClaim && !isExpired;
 
   const details = [
     {
@@ -145,6 +147,19 @@ export default function ListingDetailPage({ params }: { params: Promise<{ id: st
           You posted this listing, so you can’t claim it yourself. You’ll see the collector’s
           details here once someone does.
         </p>
+      ) : null}
+
+      {/* Expired warning — shown when the cron hasn't flipped status yet */}
+      {isExpired && !isMine && !myActiveClaim ? (
+        <div className="rounded-lg border border-destructive/40 bg-destructive/10 p-4 space-y-1 text-destructive">
+          <div className="flex items-center gap-2 font-semibold text-sm">
+            <span aria-hidden="true">⚠️</span>
+            This listing has expired
+          </div>
+          <p className="text-xs text-destructive/90">
+            This food expired at {formatDateTime(listing.expires_at)} and can no longer be claimed.
+          </p>
+        </div>
       ) : null}
 
       {canClaim ? (

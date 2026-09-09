@@ -37,6 +37,11 @@ begin
     raise exception 'Listing % is not available to claim', p_listing_id using errcode = 'P0001';
   end if;
 
+  -- Reject expired listings even if the cron hasn't flipped status yet.
+  if now() >= v_expires_at then
+    raise exception 'This listing has already expired and can no longer be claimed' using errcode = 'P0001';
+  end if;
+
   if p_pickup_deadline is not null then
     if p_pickup_deadline > v_expires_at then
       raise exception 'Collection time cannot be after listing expiry' using errcode = 'P0001';

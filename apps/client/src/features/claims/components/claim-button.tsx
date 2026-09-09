@@ -41,8 +41,8 @@ export function ClaimButton({
   }
 
   function confirm() {
-    // selectedCollectionTime is guaranteed non-null here because confirmDisabled={!isSelectedTimeValid}.
-    const pickupDeadline = selectedCollectionTime?.toISOString() ?? new Date().toISOString();
+    if (!isSelectedTimeValid || !selectedCollectionTime) return;
+    const pickupDeadline = selectedCollectionTime.toISOString();
 
     claim.mutate(
       { listingId, pickupDeadline },
