@@ -95,7 +95,7 @@ export default function Home() {
 
           <div className="relative mx-auto w-full max-w-6xl px-4 py-20 sm:px-6 sm:py-28">
             <div className="mx-auto max-w-3xl text-center">
-              <span className="inline-flex items-center gap-2 rounded-full border border-border bg-card px-3 py-1 text-sm text-muted-foreground shadow-soft">
+              <span className="inline-flex items-center gap-2 rounded-full border border-border px-3 py-1 text-sm text-primary bg-primary/5 shadow-soft">
                 <Sprout className="size-3.5 text-primary" aria-hidden="true" />
                 Community food rescue
               </span>
@@ -133,7 +133,9 @@ export default function Home() {
             {/* Section Header */}
             <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
               <div className="max-w-2xl">
-                <span className="text-sm font-medium text-primary">Simple process</span>
+                <span className="inline-flex items-center gap-2 rounded-full border border-border px-3 py-1 text-sm text-primary bg-primary/5 shadow-soft">
+                  Simple process
+                </span>
 
                 <h2 className="mt-2 text-3xl font-semibold tracking-tight sm:text-4xl">
                   How it works
@@ -214,61 +216,127 @@ export default function Home() {
         </section>
 
         {/* The urgency argument */}
-        <section className="border-t border-border">
-          <div className="mx-auto w-full max-w-6xl px-4 py-20 sm:px-6">
-            <div className="grid items-center gap-10 lg:grid-cols-2">
+        <section className="border-t border-border bg-muted/20">
+          <div className="mx-auto w-full max-w-6xl px-4 py-20 sm:px-6 lg:py-24">
+            <div className="grid items-center gap-14 lg:grid-cols-[0.9fr_1.1fr] lg:gap-20">
+              {/* Content */}
               <div>
-                <h2 className="text-3xl font-semibold tracking-tight text-balance">
-                  Food waste is a timing problem
+                <span className="inline-flex items-center gap-2 rounded-full border border-border px-3 py-1 text-sm text-primary bg-primary/5 shadow-soft">
+                  Why FoodBridge?
+                </span>
+
+                <h2 className="mt-5 max-w-xl text-3xl font-semibold tracking-tight text-balance sm:text-4xl">
+                  Food waste is a <span className="text-primary">timing problem.</span>
                 </h2>
-                <p className="mt-4 text-muted-foreground">
+
+                <p className="mt-5 max-w-lg text-base leading-7 text-muted-foreground">
                   Surplus food doesn’t go to waste because nobody wants it. It goes to waste because
                   the people who want it don’t hear about it in time. FoodBridge makes the clock
                   visible to everyone: every listing shows exactly how long is left, and every claim
                   starts a countdown.
                 </p>
+
                 <div className="mt-8">
-                  <Button render={<Link href="/signup" />}>
+                  <Button render={<Link href="/signup" />} className="group">
                     Get started
-                    <ArrowRight aria-hidden="true" />
+                    <ArrowRight
+                      className="transition-transform duration-200 group-hover:translate-x-0.5"
+                      aria-hidden="true"
+                    />
                   </Button>
                 </div>
               </div>
 
-              {/* Illustrative listing card — mirrors the real component */}
-              <Card className="gap-4 p-5" variant="raised">
-                <div className="flex items-start justify-between gap-3">
-                  <div className="flex min-w-0 items-start gap-3">
-                    <span className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
-                      <UtensilsCrossed className="size-5" aria-hidden="true" />
-                    </span>
-                    <div className="min-w-0">
-                      <p className="truncate font-semibold">Chicken biryani</p>
-                      <p className="mt-0.5 text-sm text-muted-foreground">40 servings</p>
+              {/* Listing visualization */}
+              <div className="relative">
+                {/* Decorative background */}
+                <div className="absolute -inset-4 -z-10 rounded-[2rem] bg-primary/4 blur-2xl" />
+
+                <Card
+                  className="relative overflow-hidden rounded-2xl border-border/70 bg-background p-0 shadow-sm"
+                  variant="raised"
+                >
+                  {/* Top accent */}
+                  <div className="h-1 bg-primary/70" />
+
+                  <div className="p-5 sm:p-6">
+                    <div className="flex items-start justify-between gap-4">
+                      <div className="flex min-w-0 items-center gap-3">
+                        <span className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
+                          <UtensilsCrossed className="size-5" aria-hidden="true" />
+                        </span>
+
+                        <div className="min-w-0">
+                          <p className="font-semibold tracking-tight">Chicken Biryani</p>
+                          <p className="mt-0.5 text-sm text-muted-foreground">
+                            40 servings available
+                          </p>
+                        </div>
+                      </div>
+
+                      <span className="inline-flex shrink-0 items-center gap-1.5 rounded-full border border-border bg-muted/40 px-2.5 py-1 text-xs font-medium text-muted-foreground">
+                        <MapPin className="size-3" aria-hidden="true" />
+                        1.2 km
+                      </span>
+                    </div>
+
+                    {/* Time remaining */}
+                    <div className="mt-7 rounded-xl border border-urgency-soon/15 bg-urgency-soon/5 p-4">
+                      <div className="flex items-center justify-between gap-3">
+                        <div>
+                          <p className="text-xs font-medium text-muted-foreground">Claim window</p>
+                          <p className="mt-1 flex items-center gap-1.5 text-sm font-semibold text-urgency-soon">
+                            <Clock3 className="size-4" aria-hidden="true" />
+                            2h 14m left
+                          </p>
+                        </div>
+
+                        <span className="text-xs font-medium text-muted-foreground">
+                          68% remaining
+                        </span>
+                      </div>
+
+                      <div className="mt-3 h-2 w-full overflow-hidden rounded-full bg-background">
+                        <div className="h-full w-[68%] rounded-full bg-urgency-soon transition-all" />
+                      </div>
+                    </div>
+
+                    {/* Location */}
+                    <div className="mt-4 flex items-center justify-between gap-3 border-t border-border pt-4">
+                      <span className="flex items-center gap-2 text-sm text-muted-foreground">
+                        <span className="flex size-7 items-center justify-center rounded-lg bg-muted">
+                          <MapPin className="size-3.5" aria-hidden="true" />
+                        </span>
+                        Banani, Dhaka
+                      </span>
+
+                      <span className="text-xs font-medium text-primary">Available now</span>
                     </div>
                   </div>
-                  <span className="inline-flex shrink-0 items-center gap-1 rounded-full border border-border px-2.5 py-0.5 text-xs font-medium text-muted-foreground">
-                    <MapPin className="size-3" aria-hidden="true" />
-                    1.2 km
-                  </span>
+                </Card>
+
+                {/* Floating status */}
+                <div className="absolute -bottom-5 -left-3 hidden rounded-xl border border-border bg-background px-4 py-3 shadow-md sm:block">
+                  <div className="flex items-center gap-2.5">
+                    <span className="flex size-7 items-center justify-center rounded-full bg-primary/10">
+                      <Clock3 className="size-3.5 text-primary" aria-hidden="true" />
+                    </span>
+
+                    <div>
+                      <p className="text-xs font-semibold">Time matters</p>
+                      <p className="text-[11px] text-muted-foreground">Claim before it expires</p>
+                    </div>
+                  </div>
                 </div>
 
-                <div className="space-y-2">
-                  <div className="h-1.5 w-full overflow-hidden rounded-full bg-muted">
-                    <div className="h-full w-[68%] rounded-full bg-urgency-soon" />
-                  </div>
-                  <div className="flex items-center justify-between gap-2">
-                    <span className="flex items-center gap-1.5 text-sm text-muted-foreground">
-                      <MapPin className="size-3.5" aria-hidden="true" />
-                      Banani, Dhaka
-                    </span>
-                    <span className="tabular flex items-center gap-1.5 text-sm font-medium text-urgency-soon">
-                      <Clock3 className="size-3.5" aria-hidden="true" />
-                      2h 14m left
-                    </span>
+                {/* Floating location badge */}
+                <div className="absolute -right-3 -top-5 hidden rounded-xl border border-border bg-background px-3 py-2 shadow-md sm:block">
+                  <div className="flex items-center gap-2 text-xs font-medium">
+                    <span className="size-2 rounded-full bg-primary" />
+                    Nearby listing
                   </div>
                 </div>
-              </Card>
+              </div>
             </div>
           </div>
         </section>
@@ -278,7 +346,9 @@ export default function Home() {
           <div className="mx-auto w-full max-w-6xl px-4 py-20 sm:px-6 lg:py-24">
             {/* Section heading */}
             <div className="mx-auto mb-12 max-w-2xl text-center">
-              <p className="text-sm font-medium text-primary">Built for everyone</p>
+              <p className="inline-flex items-center gap-2 rounded-full border border-border px-3 py-1 text-sm text-primary bg-primary/5 shadow-soft">
+                Built for everyone
+              </p>
               <h2 className="mt-2 text-3xl font-semibold tracking-tight text-balance sm:text-4xl">
                 One platform, two ways to make a difference
               </h2>
@@ -348,23 +418,88 @@ export default function Home() {
       </main>
 
       <footer className="border-t border-border">
-        <div className="mx-auto flex w-full max-w-6xl flex-col gap-4 px-4 py-10 sm:flex-row sm:items-center sm:justify-between sm:px-6">
-          <div className="flex items-center gap-2 font-semibold tracking-tight">
-            <span className="flex size-7 items-center justify-center rounded-lg bg-primary text-primary-foreground">
-              <Sprout className="size-4" aria-hidden="true" />
-            </span>
-            FoodBridge
+        <div className="mx-auto w-full max-w-6xl px-4 py-12 sm:px-6 lg:py-14">
+          {/* Main footer */}
+          <div className="grid gap-10 lg:grid-cols-[1.6fr_0.8fr_1fr]">
+            {/* Brand */}
+            <div className="max-w-md">
+              <Link href="/" className="group inline-flex items-center gap-2.5">
+                <span className="flex size-9 items-center justify-center rounded-xl bg-primary text-primary-foreground shadow-sm transition-transform duration-200 group-hover:-rotate-3">
+                  <Sprout className="size-4.5" aria-hidden="true" />
+                </span>
+
+                <span className="text-base font-semibold tracking-tight">FoodBridge</span>
+              </Link>
+
+              <p className="mt-4 max-w-sm text-sm leading-6 text-muted-foreground">
+                Connecting surplus food with people who can put it to good use. Less waste, more
+                community.
+              </p>
+
+              <div className="mt-5 inline-flex items-center gap-2 rounded-full border border-border bg-background px-3 py-1.5 text-xs font-medium text-muted-foreground">
+                <span className="size-1.5 rounded-full bg-primary" />
+                Building a less wasteful community
+              </div>
+            </div>
+
+            {/* Platform */}
+            <div>
+              <h3 className="text-sm font-semibold">Join Us</h3>
+
+              <div className="mt-4 flex flex-col gap-3">
+                <Link
+                  href="/login"
+                  className="w-fit text-sm text-muted-foreground transition-colors hover:text-foreground"
+                >
+                  Log in
+                </Link>
+
+                <Link
+                  href="/signup"
+                  className="w-fit text-sm text-muted-foreground transition-colors hover:text-foreground"
+                >
+                  Sign up
+                </Link>
+              </div>
+            </div>
+
+            {/* Contact */}
+            <div>
+              <h3 className="text-sm font-semibold">Get in touch</h3>
+
+              <div className="mt-4 space-y-3">
+                <a
+                  href="mailto:hello@foodbridge.com"
+                  className="group flex items-center gap-3 text-sm text-muted-foreground transition-colors hover:text-foreground"
+                >
+                  <span className="flex size-8 shrink-0 items-center justify-center rounded-lg border border-border bg-background transition-colors group-hover:border-primary/30 group-hover:bg-primary/5">
+                    <Sprout className="size-4" aria-hidden="true" />
+                  </span>
+                  hello@foodbridge.com
+                </a>
+
+                <a
+                  href="tel:+8801234567890"
+                  className="group flex items-center gap-3 text-sm text-muted-foreground transition-colors hover:text-foreground"
+                >
+                  <span className="flex size-8 shrink-0 items-center justify-center rounded-lg border border-border bg-background transition-colors group-hover:border-primary/30 group-hover:bg-primary/5">
+                    <PhoneCall className="size-4" aria-hidden="true" />
+                  </span>
+                  +880 1739-702012
+                </a>
+              </div>
+            </div>
           </div>
-          <p className="text-sm text-muted-foreground">
-            Rescuing surplus food, one pickup at a time.
-          </p>
-          <div className="flex items-center gap-4 text-sm">
-            <Link href="/login" className="text-muted-foreground hover:text-foreground">
-              Log in
-            </Link>
-            <Link href="/signup" className="text-muted-foreground hover:text-foreground">
-              Sign up
-            </Link>
+
+          {/* Bottom bar */}
+          <div className="mt-10 flex flex-col gap-3 border-t border-border pt-6 text-xs text-muted-foreground sm:flex-row sm:items-center sm:justify-between">
+            <p>© {new Date().getFullYear()} FoodBridge. All rights reserved.</p>
+
+            <p className="flex items-center gap-1.5">
+              Made for the community
+              <span className="text-primary">•</span>
+              One pickup at a time.
+            </p>
           </div>
         </div>
       </footer>

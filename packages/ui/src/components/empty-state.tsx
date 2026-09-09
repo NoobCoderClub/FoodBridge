@@ -33,7 +33,7 @@ function EmptyState({
           {icon}
         </div>
       ) : null}
-      <p className="text-base font-semibold">{title}</p>
+      <p className="text-2xl font-semibold">{title}</p>
       {description ? (
         <p className="mt-1.5 max-w-sm text-sm text-muted-foreground">{description}</p>
       ) : null}
